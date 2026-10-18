@@ -38,6 +38,26 @@
     <p class="text-sm font-semibold text-sky-300 tracking-wider animate-pulse">Cargando...</p>
   </div>
 
+  <!-- MODAL DE CAMARA EN PANTALLA COMPLETA -->
+  <div id="fullscreen-camera-modal" class="hidden fixed inset-0 z-50 bg-black flex flex-col justify-between p-4">
+    <div class="flex items-center justify-between text-white p-2">
+      <h3 class="text-sm font-bold tracking-wider uppercase text-amber-400"><i class="fas fa-camera mr-2"></i> Capturar Factura en Pantalla Completa</h3>
+      <button onclick="stopFullscreenCamera()" class="p-2 rounded-full bg-slate-800 text-white hover:bg-slate-700 text-lg px-3">&times;</button>
+    </div>
+    <div class="flex-1 relative flex items-center justify-center overflow-hidden">
+      <video id="fullscreen-video" autoplay playsinline class="absolute inset-0 w-full h-full object-cover"></video>
+      <canvas id="snapshot-canvas" class="hidden"></canvas>
+    </div>
+    <div class="p-4 flex justify-center items-center gap-4 bg-black/80">
+      <button type="button" onclick="takeFullscreenSnapshot()" class="px-8 py-4 rounded-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-base shadow-xl flex items-center gap-2">
+        <i class="fas fa-camera text-xl"></i> Tomar Fotografía
+      </button>
+      <button type="button" onclick="stopFullscreenCamera()" class="px-5 py-3 rounded-full bg-slate-800 text-white font-semibold text-xs">
+        Cancelar
+      </button>
+    </div>
+  </div>
+
   <header class="glass-card sticky top-0 z-40 px-4 py-3 flex items-center justify-between border-b border-slate-700/80">
     <div class="flex items-center space-x-3">
       <button onclick="toggleSidebar()" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sky-400"><i class="fas fa-bars text-lg"></i></button>
@@ -93,7 +113,7 @@
       <section id="sec-abastecimiento" class="view-section max-w-xl mx-auto glass-card p-6 rounded-2xl shadow-xl">
         <div class="flex items-center space-x-3 mb-6 border-b border-slate-700 pb-4">
           <div class="p-3 rounded-xl bg-amber-500/20 text-amber-400"><i class="fas fa-gas-pump text-2xl"></i></div>
-          <div><h2 class="text-xl font-bold">Registro de Abastecimiento</h2><p class="text-xs text-slate-400">Verificación de conductor y captura en vivo</p></div>
+          <div><h2 class="text-xl font-bold">Registro de Abastecimiento</h2><p class="text-xs text-slate-400">Verificación de conductor y captura en pantalla completa</p></div>
         </div>
         <form onsubmit="handleAbastecimientoSubmit(event)" class="space-y-4">
           <div><label class="block text-xs font-semibold uppercase text-slate-300 mb-1">1. Distrito Operativo</label><select id="abs-distrito" required onchange="filterPlacasByDistrito('abs-distrito', 'abs-placa')" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm"></select></div>
@@ -105,18 +125,13 @@
           </div>
           <div class="p-4 rounded-xl bg-slate-900/90 border border-slate-700 space-y-3">
             <div class="flex items-center justify-between">
-              <div><p class="text-xs font-bold text-amber-400 uppercase"><i class="fas fa-camera mr-1"></i> 6. Foto de Factura (Cámara en Vivo)</p><p class="text-[11px] text-slate-400">Captura directa obligatoria</p></div>
-              <button type="button" onclick="startLiveCamera()" class="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-xs font-bold"><i class="fas fa-video mr-1"></i> Activar Cámara</button>
+              <div><p class="text-xs font-bold text-amber-400 uppercase"><i class="fas fa-camera mr-1"></i> 6. Foto de Factura (Cámara en Pantalla Completa)</p><p class="text-[11px] text-slate-400">Captura directa obligatoria</p></div>
+              <button type="button" onclick="startFullscreenCamera()" class="px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-xs font-bold text-white shadow-md"><i class="fas fa-camera mr-1"></i> Activar Cámara</button>
             </div>
-            <div id="camera-stream-box" class="hidden space-y-2">
-              <video id="live-video" autoplay playsinline class="w-full max-h-64 object-cover rounded-lg border border-sky-500/50 bg-black"></video>
-              <button type="button" onclick="takeSnapshotPNG()" class="w-full py-2 rounded-lg bg-emerald-500 text-slate-950 font-bold text-xs"><i class="fas fa-camera-retro mr-1"></i> Capturar Fotograma PNG</button>
-            </div>
-            <canvas id="snapshot-canvas" class="hidden"></canvas>
             <div id="snapshot-preview-box" class="hidden space-y-2">
               <p class="text-[11px] text-emerald-400 font-semibold"><i class="fas fa-check-circle mr-1"></i> Fotografía PNG capturada con éxito:</p>
               <img id="snapshot-preview-img" class="w-full max-h-56 object-contain rounded-lg border border-emerald-500/40 bg-slate-950 p-1">
-              <button type="button" onclick="retakeSnapshot()" class="px-3 py-1 rounded bg-slate-800 text-xs text-amber-300"><i class="fas fa-redo mr-1"></i> Volver a Tomar</button>
+              <button type="button" onclick="startFullscreenCamera()" class="px-3 py-1 rounded bg-slate-800 text-xs text-amber-300"><i class="fas fa-redo mr-1"></i> Volver a Tomar Foto</button>
             </div>
             <input type="hidden" id="abs-factura-base64" required>
           </div>
@@ -287,7 +302,7 @@
         </div>
       </section>
 
-      <!-- 9. VEHICULOS -->
+      <!-- 9. VEHICULOS (CON KILOMETRAJE INICIAL BASE) -->
       <section id="sec-dash-vehiculos" class="view-section hidden grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div class="glass-card p-5 rounded-2xl space-y-4">
           <h3 class="text-lg font-bold text-indigo-400">Registrar / Editar Vehículo</h3>
@@ -296,6 +311,10 @@
             <div class="grid grid-cols-2 gap-2">
               <div><label class="block text-xs text-slate-300 mb-1">Distrito</label><select id="veh-distrito" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-2 text-xs"></select></div>
               <div><label class="block text-xs text-amber-300 mb-1">Combustible</label><select id="veh-combustible" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-2 text-xs font-bold"><option value="ECO">ECO ($3.17)</option><option value="SUPER">SUPER ($5.42)</option><option value="DIESEL">DIESEL ($3.11)</option></select></div>
+            </div>
+            <div>
+              <label class="block text-xs text-emerald-300 mb-1">Kilometraje Inicial / Base</label>
+              <input type="number" id="veh-km-inicial" required placeholder="Ej: 84000" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs font-mono">
             </div>
             <div><label class="block text-xs text-slate-300 mb-1">Marca / Modelo</label><input type="text" id="veh-modelo" required placeholder="Ej: Kia Sportage" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs"></div>
             <div class="pt-2 border-t border-slate-700">
@@ -392,8 +411,20 @@
       if (formTarget === 'bitacora') showSection('sec-bitacora-form');
       else if (formTarget === 'admin') showSection('sec-login');
       else showSection('sec-abastecimiento');
+
       await loadPublicData();
       addPersonalRow();
+
+      // RECUPERAR SESIÓN PERSISTENTE (LOCALSTORAGE)
+      const savedUser = localStorage.getItem('jd_fleet_user');
+      if (savedUser) {
+        try {
+          currentUser = JSON.parse(savedUser);
+          await enterDashboard(true);
+        } catch (e) {
+          localStorage.removeItem('jd_fleet_user');
+        }
+      }
     });
 
     function toggleSidebar() { document.getElementById('sidebar').classList.toggle('-translate-x-full'); }
@@ -409,14 +440,14 @@
     function showSection(id) {
       document.querySelectorAll('.view-section').forEach(s => s.classList.add('hidden'));
       document.getElementById(id).classList.remove('hidden');
-      if (id !== 'sec-abastecimiento') stopLiveCamera();
+      if (id !== 'sec-abastecimiento') stopFullscreenCamera();
       if (id === 'sec-bitacora-form') captureGPS();
       if (id === 'sec-dash-mapa') setTimeout(renderMap, 250);
       if (id === 'sec-dash-analitica') setTimeout(renderFuelTrendChart, 200);
       if (window.innerWidth < 768) document.getElementById('sidebar').classList.add('-translate-x-full');
     }
 
-    // CONTROL DE VISIBILIDAD DE CARGA "JD - CARGANDO..."
+    // INDICADOR DE CARGA GLOBAL CENTRADO (JD - CARGANDO...)
     function setLoading(isLoading) {
       const overlay = document.getElementById('global-loading-overlay');
       if (overlay) {
@@ -478,60 +509,53 @@
       });
     }
 
-    // CAMARA EN VIVO CORREGIDA
-    async function startLiveCamera() {
+    // CAMARA EN PANTALLA COMPLETA
+    async function startFullscreenCamera() {
       try {
-        stopLiveCamera();
+        const modal = document.getElementById('fullscreen-camera-modal');
+        modal.classList.remove('hidden');
+        const videoEl = document.getElementById('fullscreen-video');
         activeCameraStream = await navigator.mediaDevices.getUserMedia({ 
           video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 960 } }, 
           audio: false 
         });
-        const videoEl = document.getElementById('live-video');
         videoEl.srcObject = activeCameraStream;
         await videoEl.play();
-        document.getElementById('camera-stream-box').classList.remove('hidden');
-        document.getElementById('snapshot-preview-box').classList.add('hidden');
-      } catch (err) { 
-        showAlert('No se pudo abrir la cámara. Asegúrese de otorgar permisos en su navegador.', true); 
+      } catch (err) {
+        stopFullscreenCamera();
+        showAlert('No se pudo activar la cámara en pantalla completa. Verifique los permisos del navegador.', true);
       }
     }
 
-    function stopLiveCamera() {
+    function stopFullscreenCamera() {
       if (activeCameraStream) { 
         activeCameraStream.getTracks().forEach(t => t.stop()); 
         activeCameraStream = null; 
       }
-      const box = document.getElementById('camera-stream-box');
-      if (box) box.classList.add('hidden');
+      const modal = document.getElementById('fullscreen-camera-modal');
+      if (modal) modal.classList.add('hidden');
     }
 
-    function takeSnapshotPNG() {
-      const v = document.getElementById('live-video');
+    function takeFullscreenSnapshot() {
+      const v = document.getElementById('fullscreen-video');
       const c = document.getElementById('snapshot-canvas');
       if (!v.videoWidth || !v.videoHeight) {
-        showAlert('Espere a que el video de la cámara esté listo.', true);
+        showAlert('La cámara está enfocando, intente de nuevo en un segundo.', true);
         return;
       }
-      const maxW = 800;
+      const maxW = 900;
       const scale = v.videoWidth > maxW ? maxW / v.videoWidth : 1;
       c.width = v.videoWidth * scale; 
       c.height = v.videoHeight * scale;
       const ctx = c.getContext('2d');
       ctx.drawImage(v, 0, 0, c.width, c.height);
-      
-      const pngDataUrl = c.toDataURL('image/png');
-      const hiddenInput = document.getElementById('abs-factura-base64');
-      hiddenInput.value = pngDataUrl;
-      
-      document.getElementById('snapshot-preview-img').src = pngDataUrl;
-      stopLiveCamera();
-      document.getElementById('snapshot-preview-box').classList.remove('hidden');
-    }
 
-    function retakeSnapshot() {
-      document.getElementById('abs-factura-base64').value = '';
-      document.getElementById('snapshot-preview-box').classList.add('hidden');
-      startLiveCamera();
+      const pngDataUrl = c.toDataURL('image/png');
+      document.getElementById('abs-factura-base64').value = pngDataUrl;
+      document.getElementById('snapshot-preview-img').src = pngDataUrl;
+      stopFullscreenCamera();
+      document.getElementById('snapshot-preview-box').classList.remove('hidden');
+      showAlert('¡Fotografía de factura capturada correctamente!');
     }
 
     function openInvoiceModal(png, placa, fecha) {
@@ -589,7 +613,7 @@
       e.preventDefault();
       const fotoPng = document.getElementById('abs-factura-base64').value;
       if (!fotoPng) { 
-        showAlert('Es obligatorio activar la cámara en vivo y capturar la foto de la factura.', true); 
+        showAlert('Es obligatorio activar la cámara y tomar la foto de la factura en pantalla completa.', true); 
         return; 
       }
       try {
@@ -636,6 +660,7 @@
       try {
         currentUser = await apiCall('LOGIN', { email: document.getElementById('login-email').value, password: document.getElementById('login-pass').value });
         if (currentUser.cambio_clave === 'SI') { document.getElementById('box-change-pass').classList.remove('hidden'); return; }
+        localStorage.setItem('jd_fleet_user', JSON.stringify(currentUser));
         enterDashboard();
       } catch (err) { showAlert(err.message, true); }
     }
@@ -646,11 +671,12 @@
       try {
         await apiCall('CHANGE_PASSWORD', { email: currentUser.email, newPassword });
         document.getElementById('box-change-pass').classList.add('hidden');
+        localStorage.setItem('jd_fleet_user', JSON.stringify(currentUser));
         enterDashboard();
       } catch (err) { showAlert(err.message, true); }
     }
 
-    async function enterDashboard() {
+    async function enterDashboard(isPersistent = false) {
       document.getElementById('admin-protected-links').classList.remove('hidden');
       document.getElementById('menu-login-btn').classList.add('hidden');
       document.getElementById('btnLogout').classList.remove('hidden');
@@ -662,11 +688,12 @@
       document.getElementById('menu-catalogos-btn').classList.toggle('hidden', !isSuper);
       await refreshDashboardData();
       populateAllDistritoSelectors();
-      showSection('sec-dash-bitacora');
+      if (!isPersistent) showSection('sec-dash-bitacora');
     }
 
     function logout() {
       currentUser = null;
+      localStorage.removeItem('jd_fleet_user');
       document.getElementById('admin-protected-links').classList.add('hidden');
       document.getElementById('menu-login-btn').classList.remove('hidden');
       document.getElementById('btnLogout').classList.add('hidden');
@@ -683,7 +710,13 @@
     }
 
     function recalculateAllFuelRecordsClient() {
-      const vehMap = {}; (dashData.vehiculos || []).forEach(v => vehMap[String(v.placa).toUpperCase()] = v.tipo_combustible || 'ECO');
+      const vehMap = {}; 
+      const vehKmBase = {};
+      (dashData.vehiculos || []).forEach(v => {
+        vehMap[String(v.placa).toUpperCase()] = v.tipo_combustible || 'ECO';
+        vehKmBase[String(v.placa).toUpperCase()] = Number(v.kilometraje_inicial || v.km_inicial || 0);
+      });
+
       const byPlaca = {}, dayCount = {}, anomalies = [];
       const sorted = [...(dashData.abastecimientos || [])].sort((a, b) => formatCleanEcuadorDate(a.fecha_hora).localeCompare(formatCleanEcuadorDate(b.fecha_hora)));
 
@@ -694,9 +727,15 @@
         r.tipo_combustible = r.tipo_combustible || vehMap[p] || 'ECO';
         r.precio_galon = Number(r.precio_galon || getApplicableFuelPrice(r.tipo_combustible, r.fecha_hora)).toFixed(2);
         r.total_usd = Number(r.total_usd || (Number(r.galones) * Number(r.precio_galon))).toFixed(2);
+        
         if (!byPlaca[p]) byPlaca[p] = [];
         const prev = byPlaca[p];
-        r.recorrido_km = prev.length === 0 ? 0 : (Number(r.kilometraje) - Number(prev[prev.length - 1].kilometraje));
+        if (prev.length === 0) {
+          const baseKm = vehKmBase[p] || 0;
+          r.recorrido_km = baseKm > 0 ? (Number(r.kilometraje) - baseKm) : 0;
+        } else {
+          r.recorrido_km = Number(r.kilometraje) - Number(prev[prev.length - 1].kilometraje);
+        }
         byPlaca[p].push(r);
       });
 
@@ -796,7 +835,7 @@
       const list = filterByPlacaAndDate(dashData.abastecimientos, 'filter-abs-placa', 'filter-abs-from', 'filter-abs-to').reverse();
       document.getElementById('table-abastecimientos').innerHTML = list.map(a => {
         const cleanF = formatCleanEcuadorDate(a.fecha_hora), foto = a.factura_base64 || a.foto_factura || '', alert = a._anomalyFlags && a._anomalyFlags.length;
-        return `<tr class="${alert ? 'bg-red-950/30 border-l-4 border-red-500' : 'hover:bg-slate-800/40'}"><td class="p-3 font-mono">${cleanF}</td><td class="p-3">${a.distrito}</td><td class="p-3"><b class="text-amber-300">${a.placa}</b><span class="block text-[10px] text-slate-400">${a.tipo_combustible || 'ECO'}</span></td><td class="p-3">${a.nombre_conductor}</td><td class="p-3 font-bold text-amber-400">${Number(a.galones).toFixed(2)}</td><td class="p-3 font-mono">$${Number(a.precio_galon).toFixed(2)}</td><td class="p-3 font-bold text-emerald-400">$${Number(a.total_usd).toFixed(2)}</td><td class="p-3 font-mono">${a.kilometraje} km</td><td class="p-3 font-mono">${a.recorrido_km > 0 ? a.recorrido_km + ' km' : 'Inicial'}</td><td class="p-3">${foto ? `<button onclick="openInvoiceByIndex('${a.id_registro}')" class="px-2 py-1 rounded bg-sky-500/20 text-sky-300 text-xs">Ver Factura</button>` : '-'}</td><td class="p-3 text-right space-x-1"><button onclick="requestRecordAction('ABASTECIMIENTO','${a.id_registro}','EDIT','${a.galones}','${a.kilometraje}')" class="px-2 py-1 rounded bg-amber-500/20 text-amber-300"><i class="fas fa-edit"></i></button><button onclick="requestRecordAction('ABASTECIMIENTO','${a.id_registro}','DELETE')" class="px-2 py-1 rounded bg-red-500/20 text-red-300"><i class="fas fa-trash"></i></button></td></tr>`;
+        return `<tr class="${alert ? 'bg-red-950/30 border-l-4 border-red-500' : 'hover:bg-slate-800/40'}"><td class="p-3 font-mono">${cleanF}</td><td class="p-3">${a.distrito}</td><td class="p-3"><b class="text-amber-300">${a.placa}</b><span class="block text-[10px] text-slate-400">${a.tipo_combustible || 'ECO'}</span></td><td class="p-3">${a.nombre_conductor}</td><td class="p-3 font-bold text-amber-400">${Number(a.galones).toFixed(2)}</td><td class="p-3 font-mono">$${Number(a.precio_galon).toFixed(2)}</td><td class="p-3 font-bold text-emerald-400">$${Number(a.total_usd).toFixed(2)}</td><td class="p-3 font-mono">${a.kilometraje} km</td><td class="p-3 font-mono">${a.recorrido_km > 0 ? a.recorrido_km + ' km' : 'Base Inicial'}</td><td class="p-3">${foto ? `<button onclick="openInvoiceByIndex('${a.id_registro}')" class="px-2 py-1 rounded bg-sky-500/20 text-sky-300 text-xs">Ver Factura</button>` : '-'}</td><td class="p-3 text-right space-x-1"><button onclick="requestRecordAction('ABASTECIMIENTO','${a.id_registro}','EDIT','${a.galones}','${a.kilometraje}')" class="px-2 py-1 rounded bg-amber-500/20 text-amber-300"><i class="fas fa-edit"></i></button><button onclick="requestRecordAction('ABASTECIMIENTO','${a.id_registro}','DELETE')" class="px-2 py-1 rounded bg-red-500/20 text-red-300"><i class="fas fa-trash"></i></button></td></tr>`;
       }).join('') || '<tr><td colspan="11" class="p-4 text-center text-slate-400">Sin registros.</td></tr>';
     }
 
@@ -923,7 +962,14 @@
 
     async function handleSaveVehiculo(e) {
       e.preventDefault();
-      const vehiculo = { placa: document.getElementById('veh-placa').value, distrito: document.getElementById('veh-distrito').value, tipo_combustible: document.getElementById('veh-combustible').value, marca_modelo: document.getElementById('veh-modelo').value };
+      const vehiculo = { 
+        placa: document.getElementById('veh-placa').value, 
+        distrito: document.getElementById('veh-distrito').value, 
+        tipo_combustible: document.getElementById('veh-combustible').value, 
+        kilometraje_inicial: document.getElementById('veh-km-inicial').value,
+        km_inicial: document.getElementById('veh-km-inicial').value,
+        marca_modelo: document.getElementById('veh-modelo').value 
+      };
       const personal = Array.from(document.querySelectorAll('.personal-item')).map(el => ({ cedula: el.querySelector('.p-cedula').value, grado_designacion: el.querySelector('.p-grado').value, nombres: el.querySelector('.p-nombres').value, funcion: el.querySelector('.p-funcion').value }));
       try { const resp = await apiCall('SAVE_VEHICULO', { vehiculo, personal }); showAlert(resp.message); e.target.reset(); document.getElementById('personal-rows-container').innerHTML = ''; addPersonalRow(); await refreshDashboardData(); }
       catch (err) { showAlert(err.message, true); }
@@ -932,7 +978,8 @@
     function renderVehiculosList() {
       document.getElementById('vehiculos-list').innerHTML = dashData.vehiculos.map(v => {
         const trip = dashData.personal.filter(p => String(p.placa).toUpperCase() === String(v.placa).toUpperCase());
-        return `<div class="p-4 rounded-xl bg-slate-900/90 border border-slate-700 flex flex-col justify-between"><div><div class="flex justify-between border-b border-slate-800 pb-2 mb-2"><span class="font-bold text-sm text-indigo-400">${v.placa} <span class="text-amber-400 text-xs">[${v.tipo_combustible || 'ECO'}]</span></span><span class="text-[11px] px-2 py-0.5 rounded bg-slate-800">${v.distrito}</span></div><p class="text-xs text-slate-300 mb-2">${v.marca_modelo}</p><div class="space-y-1 text-[11px] text-slate-400">${trip.map(t => `<div>• <b>${t.funcion}:</b>${t.grado_designacion} ${t.nombres} (${t.cedula})</div>`).join('')}</div></div><div class="mt-4 pt-2 border-t border-slate-800 flex justify-end gap-2 text-xs"><button onclick='loadVehiculoForEdit(${JSON.stringify(v)}, ${JSON.stringify(trip)})' class="px-2.5 py-1 rounded bg-sky-500/20 text-sky-300">Editar</button><button onclick="handleDeleteVehiculo('${v.placa}')" class="px-2.5 py-1 rounded bg-red-500/20 text-red-300">Eliminar</button></div></div>`;
+        const kmBase = v.kilometraje_inicial || v.km_inicial || 'No definido';
+        return `<div class="p-4 rounded-xl bg-slate-900/90 border border-slate-700 flex flex-col justify-between"><div><div class="flex justify-between border-b border-slate-800 pb-2 mb-2"><span class="font-bold text-sm text-indigo-400">${v.placa} <span class="text-amber-400 text-xs">[${v.tipo_combustible || 'ECO'}]</span></span><span class="text-[11px] px-2 py-0.5 rounded bg-slate-800">${v.distrito}</span></div><p class="text-xs text-slate-300 mb-1">${v.marca_modelo}</p><p class="text-[11px] text-emerald-400 mb-2 font-mono">Km Inicial Base: ${kmBase} km</p><div class="space-y-1 text-[11px] text-slate-400">${trip.map(t => `<div>• <b>${t.funcion}:</b>${t.grado_designacion} ${t.nombres} (${t.cedula})</div>`).join('')}</div></div><div class="mt-4 pt-2 border-t border-slate-800 flex justify-end gap-2 text-xs"><button onclick='loadVehiculoForEdit(${JSON.stringify(v)}, ${JSON.stringify(trip)})' class="px-2.5 py-1 rounded bg-sky-500/20 text-sky-300">Editar</button><button onclick="handleDeleteVehiculo('${v.placa}')" class="px-2.5 py-1 rounded bg-red-500/20 text-red-300">Eliminar</button></div></div>`;
       }).join('') || '<p class="text-xs text-slate-400">Sin vehículos.</p>';
     }
 
@@ -940,6 +987,7 @@
       document.getElementById('veh-placa').value = v.placa;
       document.getElementById('veh-distrito').value = v.distrito;
       document.getElementById('veh-combustible').value = v.tipo_combustible || 'ECO';
+      document.getElementById('veh-km-inicial').value = v.kilometraje_inicial || v.km_inicial || '';
       document.getElementById('veh-modelo').value = v.marca_modelo;
       document.getElementById('personal-rows-container').innerHTML = '';
       trip.forEach(t => addPersonalRow(t.cedula, t.nombres, t.grado_designacion, t.funcion));
