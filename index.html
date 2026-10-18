@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SISTEMA DE REGISTRO DE ABASTECIMIENTO Y BITACORA DIGITAL</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <!-- Leaflet Map CSS & JS (Gratuito sin API Key) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- QRCode.js para generar los QR desde el mismo sistema -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+  <style>
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      position: relative;
+      background-color: #0f172a;
+      color: #f8fafc;
+      overflow-x: hidden;
+    }
+    /* Imagen de fondo transparentada solicitada */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background-image: url('https://londoncg.com/hs-fs/hubfs/junio%202024/Inteligencia%20artificial%20en%20el%20an%C3%A1lisis%20de%20datos/inteligencia-artificial-en-la-analitica-de-datos.png?width=900&height=500&name=inteligencia-artificial-en-la-analitica-de-datos.png');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      opacity: 0.16;
+      z-index: -1;
+      pointer-events: none;
+    }
+    .glass-card {
+      background: rgba(15, 23, 42, 0.82);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+    }
+    .Watermark-dev {
+      position: fixed;
+      bottom: 10px;
+      right: 16px;
+      z-index: 9999;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 0.78rem;
+      color: #38bdf8;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    }
+    #map { height: 460px; width: 100%; border-radius: 0.75rem; z-index: 10; }
+  </style>
+</head>
+<body class="flex flex-col min-h-screen">
+
+  <!-- HEADER SUPERIOR -->
+  <header class="glass-card sticky top-0 z-40 px-4 py-3 flex items-center justify-between border-b border-slate-700/80">
+    <div class="flex items-center space-x-3">
+      <button onclick="toggleSidebar()" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sky-400 transition">
+        <i class="fas fa-bars text-lg"></i>
+      </button>
+      <div>
+        <h1 class="text-sm md:text-lg font-bold tracking-wide text-white uppercase">
+          SISTEMA DE REGISTRO DE ABASTECIMIENTO Y BITACORA DIGITAL
+        </h1>
+        <p id="activeUserBadge" class="text-xs text-sky-400 hidden"></p>
+      </div>
+    </div>
+    <div class="flex items-center space-x-2">
+      <span id="clockDisplay" class="hidden md:inline-block text-xs bg-slate-800/90 px-3 py-1.5 rounded-md border border-slate-700 text-slate-300 font-mono"></span>
+      <button id="btnLogout" onclick="logout()" class="hidden px-3 py-1.5 rounded-lg bg-red-600/80 hover:bg-red-600 text-xs font-semibold transition">
+        <i class="fas fa-sign-out-alt mr-1"></i> Salir
+      </button>
+    </div>
+  </header>
+
+  <div class="flex flex-1 relative">
+    <!-- MENU LATERAL DESPLEGABLE A LA IZQUIERDA -->
+    <aside id="sidebar" class="glass-card w-72 border-r border-slate-700/80 flex flex-col justify-between transition-all duration-300 fixed md:static inset-y-0 left-0 z-30 -translate-x-full md:translate-x-0">
+      <div class="p-4 space-y-6">
+        <div>
+          <p class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 px-2">Formularios Operativos (QR)</p>
+          <nav class="space-y-1">
+            <button onclick="showSection('sec-abastecimiento')" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg hover:bg-sky-500/20 text-left text-sm transition">
+              <i class="fas fa-gas-pump text-amber-400 w-5"></i>
+              <span>1. Abastecimiento Combustible</span>
+            </button>
+            <button onclick="showSection('sec-bitacora-form')" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg hover:bg-sky-500/20 text-left text-sm transition">
+              <i class="fas fa-route text-emerald-400 w-5"></i>
+              <span>2. Bitácora de Salida (GPS)</span>
+            </button>
+          </nav>
+        </div>
+
+        <hr class="border-slate-700/70">
+
+        <!-- OPCIONES DEL PANEL DE CONTROL -->
+        <div>
+          <p class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 px-2">Administración y Control</p>
+          <nav id="nav-admin" class="space-y-1">
+            <button onclick="showSection('sec-login')" id="menu-login-btn" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg hover:bg-sky-500/20 text-left text-sm transition">
+              <i class="fas fa-lock text-sky-400 w-5"></i>
+              <span>Acceso Panel de Control</span>
+            </button>
+
+            <div id="admin-protected-links" class="space-y-1 hidden">
+              <button onclick="showSection('sec-dash-bitacora')" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg hover:bg-sky-500/20 text-left text-sm transition">
+                <i class="fas fa-stream text-sky-400 w-5"></i>
+                <span>Bitácora (Línea de Tiempo)</span>
+              </button>
+              <button onclick="showSection('sec-dash-abastecimiento')" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg hover:bg-sky-500/20 text-left text-sm transition">
+                <i class="fas fa-oil-can text-amber-400 w-5"></i>
+                <span>Historial Abastecimientos</span>
+              </button>
+              <button onclick="showSection('sec-dash-mapa')" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg hover:bg-sky-500/20 text-left text-sm transition">
+                <i class="fas fa-map-marked-alt text-emerald-400 w-5"></i>
+                <span>Mapa de Operaciones GPS</span>
+              </button>
+              <button onclick="showSection('sec-dash-vehiculos')" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg hover:bg-sky-500/20 text-left text-sm transition">
+                <i class="fas fa-car-side text-indigo-400 w-5"></i>
+                <span>Flota Vehicular y Personal</span>
+              </button>
+              <button onclick="showSection('sec-dash-usuarios')" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg hover:bg-sky-500/20 text-left text-sm transition">
+                <i class="fas fa-users-cog text-purple-400 w-5"></i>
+                <span>Usuarios y Autorizaciones</span>
+              </button>
+              <button onclick="showSection('sec-dash-qrs')" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg hover:bg-sky-500/20 text-left text-sm transition">
+                <i class="fas fa-qrcode text-pink-400 w-5"></i>
+                <span>Códigos QR Oficiales</span>
+              </button>
+            </div>
+          </nav>
+        </div>
+      </div>
+
+      <div class="p-4 border-t border-slate-800 text-xs text-slate-400">
+        <p>Control de Flota & Operaciones</p>
+      </div>
+    </aside>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <main class="flex-1 p-4 md:p-8 overflow-y-auto pb-16">
+      
+      <!-- NOTIFICACIONES / ESTADO -->
+      <div id="alertBox" class="hidden mb-6 p-4 rounded-xl border text-sm font-medium flex items-center justify-between">
+        <span id="alertMessage"></span>
+        <button onclick="document.getElementById('alertBox').classList.add('hidden')" class="ml-4 text-lg">&times;</button>
+      </div>
+
+      <!-- SECCION 1: FORMULARIO QR ABASTECIMIENTO -->
+      <section id="sec-abastecimiento" class="view-section max-w-xl mx-auto glass-card p-6 rounded-2xl shadow-xl">
+        <div class="flex items-center space-x-3 mb-6 border-b border-slate-700 pb-4">
+          <div class="p-3 rounded-xl bg-amber-500/20 text-amber-400">
+            <i class="fas fa-gas-pump text-2xl"></i>
+          </div>
+          <div>
+            <h2 class="text-xl font-bold">Registro de Abastecimiento</h2>
+            <p class="text-xs text-slate-400">Verificación automática de conductor asignado a la unidad</p>
+          </div>
+        </div>
+
+        <form onsubmit="handleAbastecimientoSubmit(event)" class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold uppercase text-slate-300 mb-1">1. Distrito Operativo</label>
+            <select id="abs-distrito" required onchange="filterPlacasByDistrito('abs-distrito', 'abs-placa')" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm focus:border-sky-400 focus:outline-none">
+              <option value="">Seleccione un distrito...</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold uppercase text-slate-300 mb-1">2. Placa del Vehículo</label>
+            <select id="abs-placa" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm focus:border-sky-400 focus:outline-none">
+              <option value="">Primero escoja un distrito...</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold uppercase text-slate-300 mb-1">3. Cédula del Conductor</label>
+            <input type="text" id="abs-cedula" required placeholder="Ej: 1712345678" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm focus:border-sky-400 focus:outline-none">
+            <p class="text-[11px] text-slate-400 mt-1">El sistema validará que esta cédula conste con función CONDUCTOR en esta placa.</p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold uppercase text-slate-300 mb-1">4. Cantidad de Galones</label>
+              <input type="number" step="0.01" id="abs-galones" required placeholder="Ej: 12.50" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm focus:border-sky-400 focus:outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold uppercase text-slate-300 mb-1">5. Kilometraje Actual</label>
+              <input type="number" id="abs-km" required placeholder="Ej: 84520" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm focus:border-sky-400 focus:outline-none">
+            </div>
+          </div>
+
+          <button type="submit" class="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-sm transition shadow-lg">
+            <i class="fas fa-save mr-2"></i> Registrar Abastecimiento
+          </button>
+        </form>
+      </section>
+
+      <!-- SECCION 2: FORMULARIO QR BITACORA DE ACTIVIDADES -->
+      <section id="sec-bitacora-form" class="view-section hidden max-w-xl mx-auto glass-card p-6 rounded-2xl shadow-xl">
+        <div class="flex items-center space-x-3 mb-6 border-b border-slate-700 pb-4">
+          <div class="p-3 rounded-xl bg-emerald-500/20 text-emerald-400">
+            <i class="fas fa-route text-2xl"></i>
+          </div>
+          <div>
+            <h2 class="text-xl font-bold">Bitácora de Salida Operativa</h2>
+            <p class="text-xs text-slate-400">Captura obligatoria de coordenadas GPS y verificación de tripulación</p>
+          </div>
+        </div>
+
+        <form onsubmit="handleBitacoraSubmit(event)" class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold uppercase text-slate-300 mb-1">1. Distrito Operativo</label>
+            <select id="bit-distrito" required onchange="filterPlacasByDistrito('bit-distrito', 'bit-placa')" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm focus:border-sky-400 focus:outline-none">
+              <option value="">Seleccione un distrito...</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold uppercase text-slate-300 mb-1">2. Placa del Vehículo</label>
+            <select id="bit-placa" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm focus:border-sky-400 focus:outline-none">
+              <option value="">Primero escoja un distrito...</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold uppercase text-slate-300 mb-1">3. Cédula(s) del Personal en el Vehículo</label>
+            <input type="text" id="bit-cedulas" required placeholder="Ej: 1712345678, 0987654321" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm focus:border-sky-400 focus:outline-none">
+            <p class="text-[11px] text-slate-400 mt-1">Si van varias personas, separe las cédulas por coma. Todas deben estar vinculadas al vehículo.</p>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold uppercase text-slate-300 mb-1">4. Actividad / Acción Operativa a Realizar</label>
+            <textarea id="bit-actividad" rows="3" required placeholder="Describa el patrullaje, operativo o comisión..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:border-sky-400 focus:outline-none"></textarea>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold uppercase text-slate-300 mb-1">5. Kilometraje de Salida</label>
+            <input type="number" id="bit-km" required placeholder="Ej: 84535" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm focus:border-sky-400 focus:outline-none">
+          </div>
+
+          <!-- BLOQUE DE UBICACIÓN GPS -->
+          <div class="p-3.5 rounded-xl bg-slate-900/90 border border-slate-700 flex items-center justify-between">
+            <div>
+              <p class="text-xs font-bold text-sky-400">Coordenadas del Registro (GPS)</p>
+              <p id="gps-status" class="text-xs text-slate-400 mt-0.5">Pendiente de captura...</p>
+              <input type="hidden" id="bit-lat">
+              <input type="hidden" id="bit-lng">
+            </div>
+            <button type="button" onclick="captureGPS()" class="px-3 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-xs font-semibold transition">
+              <i class="fas fa-location-crosshairs mr-1"></i> Obtener Ubicación
+            </button>
+          </div>
+
+          <button type="submit" class="w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm transition shadow-lg">
+            <i class="fas fa-paper-plane mr-2"></i> Registrar Salida en Bitácora
+          </button>
+        </form>
+      </section>
+
+      <!-- SECCION 3: LOGIN PANEL DE CONTROL -->
+      <section id="sec-login" class="view-section hidden max-w-md mx-auto glass-card p-6 rounded-2xl shadow-xl">
+        <div class="text-center mb-6">
+          <div class="w-14 h-14 rounded-2xl bg-sky-500/20 text-sky-400 flex items-center justify-center mx-auto mb-3">
+            <i class="fas fa-user-shield text-2xl"></i>
+          </div>
+          <h2 class="text-xl font-bold">Acceso Administrativo</h2>
+          <p class="text-xs text-slate-400">Ingrese con su correo institucional/asignado y contraseña</p>
+        </div>
+
+        <form onsubmit="handleLogin(event)" class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold uppercase text-slate-300 mb-1">Usuario (Correo)</label>
+            <input type="email" id="login-email" required placeholder="clavesjd@gmail.com" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold uppercase text-slate-300 mb-1">Contraseña</label>
+            <input type="password" id="login-pass" required placeholder="••••••••" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm">
+          </div>
+          <button type="submit" class="w-full py-3 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-sm transition">
+            Ingresar al Panel
+          </button>
+        </form>
+
+        <!-- MODAL CAMBIO DE CLAVE TEMPORAL EN PRIMER INGRESO -->
+        <div id="box-change-pass" class="hidden mt-6 pt-6 border-t border-slate-700">
+          <h3 class="text-sm font-bold text-amber-400 mb-2">Cambio Obligatorio de Clave Temporal</h3>
+          <p class="text-xs text-slate-300 mb-3">Por seguridad, defina su nueva contraseña personal antes de continuar.</p>
+          <input type="password" id="new-personal-pass" placeholder="Nueva contraseña segura" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm mb-3">
+          <button onclick="submitNewPassword()" class="w-full py-2.5 rounded-lg bg-emerald-500 text-slate-950 font-bold text-xs">
+            Actualizar Contraseña y Entrar
+          </button>
+        </div>
+      </section>
+
+      <!-- SECCION 4: BITACORA EN LINEA DE TIEMPO -->
+      <section id="sec-dash-bitacora" class="view-section hidden space-y-6">
+        <div class="glass-card p-5 rounded-2xl flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div>
+            <h2 class="text-xl font-bold flex items-center gap-2">
+              <i class="fas fa-stream text-sky-400"></i> Línea de Tiempo de Bitácora Operativa
+            </h2>
+            <p class="text-xs text-slate-400">Visualización cronológica de acciones operativas y salidas de vehículos</p>
+          </div>
+          <!-- FILTROS -->
+          <div class="flex flex-wrap items-end gap-3">
+            <div>
+              <label class="block text-[11px] text-slate-400">Placa</label>
+              <input type="text" id="filter-bit-placa" oninput="renderBitacoraTimeline()" placeholder="Todas..." class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs">
+            </div>
+            <div>
+              <label class="block text-[11px] text-slate-400">Desde</label>
+              <input type="date" id="filter-bit-from" onchange="renderBitacoraTimeline()" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs">
+            </div>
+            <div>
+              <label class="block text-[11px] text-slate-400">Hasta</label>
+              <input type="date" id="filter-bit-to" onchange="renderBitacoraTimeline()" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs">
+            </div>
+          </div>
+        </div>
+
+        <!-- CONTENEDOR TIMELINE -->
+        <div id="timeline-container" class="relative border-l-2 border-sky-500/50 ml-4 md:ml-8 pl-6 space-y-6">
+          <!-- Renderizado dinámico -->
+        </div>
+      </section>
+
+      <!-- SECCION 5: HISTORIAL DE ABASTECIMIENTOS -->
+      <section id="sec-dash-abastecimiento" class="view-section hidden space-y-6">
+        <div class="glass-card p-5 rounded-2xl flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div>
+            <h2 class="text-xl font-bold flex items-center gap-2">
+              <i class="fas fa-gas-pump text-amber-400"></i> Control de Abastecimiento de Combustible
+            </h2>
+            <p class="text-xs text-slate-400">Auditoría por unidad, galones despachados y kilometraje</p>
+          </div>
+          <div class="flex flex-wrap items-end gap-3">
+            <div>
+              <label class="block text-[11px] text-slate-400">Placa</label>
+              <input type="text" id="filter-abs-placa" oninput="renderAbastecimientosTable()" placeholder="Todas..." class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs">
+            </div>
+            <div>
+              <label class="block text-[11px] text-slate-400">Desde</label>
+              <input type="date" id="filter-abs-from" onchange="renderAbastecimientosTable()" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs">
+            </div>
+            <div>
+              <label class="block text-[11px] text-slate-400">Hasta</label>
+              <input type="date" id="filter-abs-to" onchange="renderAbastecimientosTable()" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs">
+            </div>
+          </div>
+        </div>
+
+        <div class="glass-card rounded-2xl overflow-x-auto">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="border-b border-slate-700 bg-slate-900/60 text-slate-300 uppercase">
+                <th class="p-3.5">Fecha / Hora</th>
+                <th class="p-3.5">Distrito</th>
+                <th class="p-3.5">Placa</th>
+                <th class="p-3.5">Conductor Verificado</th>
+                <th class="p-3.5">Galones</th>
+                <th class="p-3.5">Kilometraje</th>
+                <th class="p-3.5 text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="table-abastecimientos" class="divide-y divide-slate-800"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- SECCION 6: MAPA GEORREFERENCIADO -->
+      <section id="sec-dash-mapa" class="view-section hidden space-y-4">
+        <div class="glass-card p-5 rounded-2xl">
+          <h2 class="text-xl font-bold flex items-center gap-2 mb-1">
+            <i class="fas fa-map-marked-alt text-emerald-400"></i> Mapa de Inicios de Actividad (Bitácora)
+          </h2>
+          <p class="text-xs text-slate-400 mb-4">Ubicaciones exactas desde donde las unidades registraron su salida operativa</p>
+          <div id="map"></div>
+        </div>
+      </section>
+
+      <!-- SECCION 7: GESTION DE VEHICULOS Y PERSONAL -->
+      <section id="sec-dash-vehiculos" class="view-section hidden grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="glass-card p-5 rounded-2xl space-y-4">
+          <h3 class="text-lg font-bold text-indigo-400">Registrar / Editar Vehículo</h3>
+          <form onsubmit="handleSaveVehiculo(event)" class="space-y-3">
+            <div>
+              <label class="block text-xs text-slate-300 mb-1">Placa del Vehículo</label>
+              <input type="text" id="veh-placa" required placeholder="Ej: PEA-1234" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs uppercase">
+            </div>
+            <div>
+              <label class="block text-xs text-slate-300 mb-1">Distrito Asignado</label>
+              <input type="text" id="veh-distrito" required placeholder="Ej: DISTRITO SUR" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs uppercase">
+            </div>
+            <div>
+              <label class="block text-xs text-slate-300 mb-1">Marca / Modelo / Tipo</label>
+              <input type="text" id="veh-modelo" required placeholder="Ej: Patrullero Kia Sportage" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs">
+            </div>
+
+            <div class="pt-2 border-t border-slate-700">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-bold text-sky-400">Personal Asignado al Vehículo</span>
+                <button type="button" onclick="addPersonalRow()" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[11px] text-sky-400">
+                  + Añadir Persona
+                </button>
+              </div>
+              <div id="personal-rows-container" class="space-y-2 max-h-64 overflow-y-auto pr-1"></div>
+            </div>
+
+            <button type="submit" class="w-full py-2.5 rounded-xl bg-indigo-500 hover:bg-indigo-400 text-slate-950 font-bold text-xs transition">
+              Guardar Vehículo y Personal
+            </button>
+          </form>
+        </div>
+
+        <div class="lg:col-span-2 glass-card p-5 rounded-2xl">
+          <h3 class="text-lg font-bold mb-4">Flota Vehicular Registrada</h3>
+          <div id="vehiculos-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+        </div>
+      </section>
+
+      <!-- SECCION 8: USUARIOS Y CODIGOS DE AUTORIZACION -->
+      <section id="sec-dash-usuarios" class="view-section hidden grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="glass-card p-5 rounded-2xl space-y-4">
+          <h3 class="text-lg font-bold text-purple-400">Crear Nuevo Usuario</h3>
+          <p class="text-xs text-slate-400">El sistema enviará automáticamente una clave temporal al correo ingresado.</p>
+          <form onsubmit="handleCreateUser(event)" class="space-y-3">
+            <div>
+              <label class="block text-xs text-slate-300 mb-1">Correo Electrónico</label>
+              <input type="email" id="usr-email" required placeholder="usuario@dominio.com" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs">
+            </div>
+            <div>
+              <label class="block text-xs text-slate-300 mb-1">Grado y Nombres Completos</label>
+              <input type="text" id="usr-nombre" required placeholder="Ej: Tnte. Carlos Pérez" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs">
+            </div>
+            <div>
+              <label class="block text-xs text-slate-300 mb-1">Rol en el Sistema</label>
+              <select id="usr-rol" onchange="toggleUserDistritoInput()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs">
+                <option value="ADMIN">ADMIN (Limitado a su Distrito)</option>
+                <option value="SUPERADMIN" id="opt-superadmin">SUPERADMIN (Acceso Total Nacional)</option>
+              </select>
+            </div>
+            <div id="usr-distrito-box">
+              <label class="block text-xs text-slate-300 mb-1">Distrito Asignado</label>
+              <input type="text" id="usr-distrito" placeholder="Ej: DISTRITO MODELO" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs uppercase">
+            </div>
+            <button type="submit" class="w-full py-2.5 rounded-xl bg-purple-500 hover:bg-purple-400 text-slate-950 font-bold text-xs transition">
+              Crear Usuario y Enviar Clave Temporal
+            </button>
+          </form>
+        </div>
+
+        <!-- PANEL EXCLUSIVO SUPERADMIN PARA GENERAR CODIGO TEMPORAL -->
+        <div id="superadmin-auth-box" class="glass-card p-5 rounded-2xl space-y-4">
+          <h3 class="text-lg font-bold text-amber-400">Generador de Código de Autorización Temporal</h3>
+          <p class="text-xs text-slate-300">
+            Como <b>SuperAdmin</b>, usted puede editar o eliminar registros directamente. Si un <b>Admin de Distrito</b> necesita corregir o eliminar un registro, genérele un código temporal de un solo uso:
+          </p>
+          <div class="flex items-end gap-3">
+            <div class="flex-1">
+              <label class="block text-xs text-slate-400 mb-1">Tiempo de Validez (Minutos)</label>
+              <input type="number" id="auth-minutos" value="15" min="1" max="120" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm">
+            </div>
+            <button onclick="handleGenerateAuthCode()" class="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs">
+              Generar Código
+            </button>
+          </div>
+          <div id="generated-code-display" class="hidden p-4 rounded-xl bg-slate-900 border border-amber-500/50 text-center">
+            <p class="text-xs text-slate-400">Entregue este código al Administrador:</p>
+            <p id="auth-code-text" class="text-2xl font-mono font-bold text-amber-400 tracking-widest my-1"></p>
+            <p class="text-[11px] text-slate-400">Caduca automáticamente tras el tiempo asignado o al primer uso.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECCION 9: GENERADOR DE CODIGOS QR IMPRIMIBLES -->
+      <section id="sec-dash-qrs" class="view-section hidden grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="glass-card p-6 rounded-2xl text-center space-y-4">
+          <h3 class="text-lg font-bold text-amber-400">QR 1: Formulario de Abastecimiento</h3>
+          <p class="text-xs text-slate-400">Escanee para abrir directamente la pantalla de control de combustible</p>
+          <div id="qr-abastecimiento" class="bg-white p-4 rounded-xl inline-block mx-auto"></div>
+          <p id="url-abs-text" class="text-[11px] font-mono text-slate-400 break-all"></p>
+        </div>
+        <div class="glass-card p-6 rounded-2xl text-center space-y-4">
+          <h3 class="text-lg font-bold text-emerald-400">QR 2: Bitácora Operativa (GPS)</h3>
+          <p class="text-xs text-slate-400">Escanee para abrir directamente la bitácora de salida vehicular</p>
+          <div id="qr-bitacora" class="bg-white p-4 rounded-xl inline-block mx-auto"></div>
+          <p id="url-bit-text" class="text-[11px] font-mono text-slate-400 break-all"></p>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- PIE DE PAGINA FIJO EN ESQUINA INFERIOR DERECHA -->
+  <div class="Watermark-dev">
+    Desarrollador: Ing. J.D. Enriquez N.
+  </div>
+
+  <script>
+    // =========================================================================
+    // CONFIGURACIÓN DE CONEXIÓN AL BACKEND (GOOGLE APPS SCRIPT WEB APP URL)
+    // =========================================================================
+    const API_URL = 'https://script.google.com/macros/s/AKfycbz27sSZ4-73_dSrDcuyYN7O_bYSRJrm1v_ZOMKbnXKPpo4KcJu7K7nnM1eLWTYPWI-XBA/exec';
+
+
+    let publicData = { vehiculos: [], distritos: [] };
+    let currentUser = null;
+    let dashData = { vehiculos: [], personal: [], abastecimientos: [], bitacora: [], usuarios: [] };
+    let mapInstance = null;
+
+    // Reloj en tiempo real
+    setInterval(() => {
+      const now = new Date();
+      document.getElementById('clockDisplay').innerText = now.toLocaleString('es-EC');
+    }, 1000);
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      addPersonalRow(); // Fila inicial por defecto en creador de vehículos
+      generateQRCodes();
+      
+      // Detectar si viene desde un escaneo QR por parámetro URL (?form=abastecimiento o ?form=bitacora)
+      const params = new URLSearchParams(window.location.search);
+      const formTarget = params.get('form');
+      if (formTarget === 'bitacora') {
+        showSection('sec-bitacora-form');
+        captureGPS();
+      } else if (formTarget === 'admin') {
+        showSection('sec-login');
+      } else {
+        showSection('sec-abastecimiento');
+      }
+
+      await loadPublicData();
+    });
+
+    function toggleSidebar() {
+      const sb = document.getElementById('sidebar');
+      sb.classList.toggle('-translate-x-full');
+    }
+
+    function showAlert(msg, isError = false) {
+      const box = document.getElementById('alertBox');
+      const text = document.getElementById('alertMessage');
+      box.className = `mb-6 p-4 rounded-xl border text-sm font-medium flex items-center justify-between ${
+        isError ? 'bg-red-950/90 border-red-500 text-red-200' : 'bg-emerald-950/90 border-emerald-500 text-emerald-200'
+      }`;
+      text.innerText = msg;
+      box.classList.remove('hidden');
+      setTimeout(() => box.classList.add('hidden'), 7000);
+    }
+
+    function showSection(id) {
+      document.querySelectorAll('.view-section').forEach(s => s.classList.add('hidden'));
+      document.getElementById(id).classList.remove('hidden');
+      if (id === 'sec-dash-mapa') setTimeout(renderMap, 250);
+      if (window.innerWidth < 768) document.getElementById('sidebar').classList.add('-translate-x-full');
+    }
+
+    async function apiCall(action, payload = {}) {
+      if (API_URL.includes('PEGAR_AQUI')) {
+        throw new Error('Configure la constante API_URL con la URL de su implementación de Google Apps Script.');
+      }
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action, ...payload })
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.message);
+      return json.data;
+    }
+
+    async function loadPublicData() {
+      try {
+        publicData = await apiCall('GET_PUBLIC_DATA');
+        populateDistritoSelectors();
+      } catch (e) {
+        console.warn('Modo vista previa o sin conexión:', e.message);
+      }
+    }
+
+    function populateDistritoSelectors() {
+      ['abs-distrito', 'bit-distrito'].forEach(selId => {
+        const sel = document.getElementById(selId);
+        sel.innerHTML = '<option value="">Seleccione un distrito...</option>';
+        publicData.distritos.forEach(d => {
+          sel.innerHTML += `<option value="${d}">${d}</option>`;
+        });
+      });
+    }
+
+    function filterPlacasByDistrito(distritoSelectId, placaSelectId) {
+      const dist = document.getElementById(distritoSelectId).value;
+      const placaSel = document.getElementById(placaSelectId);
+      placaSel.innerHTML = '<option value="">Seleccione placa...</option>';
+      publicData.vehiculos
+        .filter(v => v.distrito === dist)
+        .forEach(v => {
+          placaSel.innerHTML += `<option value="${v.placa}">${v.placa} - ${v.marca_modelo}</option>`;
+        });
+    }
+
+    // =========================================================================
+    // ENVÍO DE FORMULARIOS QR (ABASTECIMIENTO Y BITÁCORA)
+    // =========================================================================
+    async function handleAbastecimientoSubmit(e) {
+      e.preventDefault();
+      try {
+        const data = {
+          distrito: document.getElementById('abs-distrito').value,
+          placa: document.getElementById('abs-placa').value,
+          cedula: document.getElementById('abs-cedula').value,
+          galones: document.getElementById('abs-galones').value,
+          kilometraje: document.getElementById('abs-km').value
+        };
+        const resp = await apiCall('SUBMIT_ABASTECIMIENTO', { data });
+        showAlert(`${resp.message} Conductor verificado: ${resp.conductor} (${resp.timestamp})`);
+        e.target.reset();
+      } catch (err) {
+        showAlert(err.message, true);
+      }
+    }
+
+    function captureGPS() {
+      const status = document.getElementById('gps-status');
+      if (!navigator.geolocation) {
+        status.innerText = 'Geolocalización no soportada en este navegador.';
+        return;
+      }
+      status.innerText = 'Solicitando permiso de ubicación GPS...';
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          const lat = pos.coords.latitude.toFixed(6);
+          const lng = pos.coords.longitude.toFixed(6);
+          document.getElementById('bit-lat').value = lat;
+          document.getElementById('bit-lng').value = lng;
+          status.innerText = `Ubicación fijada: ${lat}, ${lng}`;
+          status.className = 'text-xs text-emerald-400 font-semibold mt-0.5';
+        },
+        err => {
+          status.innerText = 'Error: Debe permitir el acceso a la ubicación para registrar la bitácora.';
+          status.className = 'text-xs text-red-400 font-semibold mt-0.5';
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    }
+
+    async function handleBitacoraSubmit(e) {
+      e.preventDefault();
+      const lat = document.getElementById('bit-lat').value;
+      const lng = document.getElementById('bit-lng').value;
+      if (!lat || !lng) {
+        showAlert('Es obligatorio obtener las coordenadas GPS antes de registrar la salida.', true);
+        captureGPS();
+        return;
+      }
+      try {
+        const data = {
+          distrito: document.getElementById('bit-distrito').value,
+          placa: document.getElementById('bit-placa').value,
+          cedulas: document.getElementById('bit-cedulas').value,
+          actividad: document.getElementById('bit-actividad').value,
+          kilometraje: document.getElementById('bit-km').value,
+          latitud: lat,
+          longitud: lng
+        };
+        const resp = await apiCall('SUBMIT_BITACORA', { data });
+        showAlert(`${resp.message} Personal: ${resp.ocupantes.join(', ')}`);
+        e.target.reset();
+        document.getElementById('gps-status').innerText = 'Pendiente de captura...';
+      } catch (err) {
+        showAlert(err.message, true);
+      }
+    }
+
+    // =========================================================================
+    // AUTENTICACIÓN Y PANEL ADMINISTRATIVO
+    // =========================================================================
+    async function handleLogin(e) {
+      e.preventDefault();
+      try {
+        const email = document.getElementById('login-email').value;
+        const password = document.getElementById('login-pass').value;
+        const user = await apiCall('LOGIN', { email, password });
+        currentUser = user;
+
+        if (user.cambio_clave === 'SI') {
+          document.getElementById('box-change-pass').classList.remove('hidden');
+          showAlert('Primer ingreso detectado. Por favor actualice su clave temporal.');
+          return;
+        }
+        enterDashboard();
+      } catch (err) {
+        showAlert(err.message, true);
+      }
+    }
+
+    async function submitNewPassword() {
+      const newPassword = document.getElementById('new-personal-pass').value;
+      if (!newPassword || newPassword.length < 5) {
+        showAlert('Ingrese una contraseña válida de al menos 5 caracteres.', true);
+        return;
+      }
+      try {
+        await apiCall('CHANGE_PASSWORD', { email: currentUser.email, newPassword });
+        document.getElementById('box-change-pass').classList.add('hidden');
+        showAlert('Clave actualizada con éxito.');
+        enterDashboard();
+      } catch (err) {
+        showAlert(err.message, true);
+      }
+    }
+
+    async function enterDashboard() {
+      document.getElementById('admin-protected-links').classList.remove('hidden');
+      document.getElementById('menu-login-btn').classList.add('hidden');
+      document.getElementById('btnLogout').classList.remove('hidden');
+      
+      const badge = document.getElementById('activeUserBadge');
+      badge.innerText = `${currentUser.nombre} | ${currentUser.rol} (${currentUser.distrito})`;
+      badge.classList.remove('hidden');
+
+      if (currentUser.rol !== 'SUPERADMIN') {
+        document.getElementById('superadmin-auth-box').classList.add('hidden');
+        document.getElementById('opt-superadmin').classList.add('hidden');
+        document.getElementById('veh-distrito').value = currentUser.distrito;
+        document.getElementById('veh-distrito').readOnly = true;
+        document.getElementById('usr-distrito').value = currentUser.distrito;
+        document.getElementById('usr-distrito').readOnly = true;
+      } else {
+        document.getElementById('superadmin-auth-box').classList.remove('hidden');
+        document.getElementById('opt-superadmin').classList.remove('hidden');
+        document.getElementById('veh-distrito').readOnly = false;
+        document.getElementById('usr-distrito').readOnly = false;
+      }
+
+      await refreshDashboardData();
+      showSection('sec-dash-bitacora');
+    }
+
+    function logout() {
+      currentUser = null;
+      document.getElementById('admin-protected-links').classList.add('hidden');
+      document.getElementById('menu-login-btn').classList.remove('hidden');
+      document.getElementById('btnLogout').classList.add('hidden');
+      document.getElementById('activeUserBadge').classList.add('hidden');
+      showSection('sec-login');
+    }
+
+    async function refreshDashboardData() {
+      dashData = await apiCall('GET_DASHBOARD_DATA', { user: currentUser });
+      renderBitacoraTimeline();
+      renderAbastecimientosTable();
+      renderVehiculosList();
+    }
+
+    // =========================================================================
+    // BITÁCORA EN LÍNEA DE TIEMPO Y TABLA DE ABASTECIMIENTOS
+    // =========================================================================
+    function filterByPlacaAndDate(list, placaInputId, fromId, toId) {
+      const qPlaca = document.getElementById(placaInputId).value.trim().toUpperCase();
+      const fromVal = document.getElementById(fromId).value;
+      const toVal = document.getElementById(toId).value;
+
+      return list.filter(item => {
+        const matchPlaca = !qPlaca || String(item.placa).toUpperCase().includes(qPlaca);
+        const itemDate = String(item.fecha_hora).substring(0, 10);
+        const matchFrom = !fromVal || itemDate >= fromVal;
+        const matchTo = !toVal || itemDate <= toVal;
+        return matchPlaca && matchFrom && matchTo;
+      });
+    }
+
+    function renderBitacoraTimeline() {
+      const container = document.getElementById('timeline-container');
+      const filtered = filterByPlacaAndDate(dashData.bitacora, 'filter-bit-placa', 'filter-bit-from', 'filter-bit-to').reverse();
+
+      if (filtered.length === 0) {
+        container.innerHTML = '<p class="text-xs text-slate-400">No existen registros de bitácora para los filtros seleccionados.</p>';
+        return;
+      }
+
+      container.innerHTML = filtered.map(b => `
+        <div class="relative glass-card p-4 rounded-xl border border-slate-700/80">
+          <div class="absolute -left-8 top-5 w-4 h-4 rounded-full bg-sky-400 border-4 border-slate-900"></div>
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2 mb-2">
+            <div class="flex items-center gap-2">
+              <span class="px-2.5 py-0.5 rounded-md bg-sky-500/20 text-sky-300 font-bold text-xs">${b.placa}</span>
+              <span class="text-xs text-slate-400 font-semibold">${b.distrito}</span>
+            </div>
+            <span class="text-xs font-mono text-slate-300"><i class="far fa-clock mr-1 text-sky-400"></i>${b.fecha_hora}</span>
+          </div>
+          <p class="text-sm font-medium text-white mb-2">${b.actividad}</p>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs text-slate-300 bg-slate-900/60 p-2.5 rounded-lg">
+            <div><b>Personal:</b> ${b.nombres_ocupantes}</div>
+            <div><b>Kilometraje Salida:</b> ${b.kilometraje} km</div>
+            <div><b>Coordenadas:</b> ${b.latitud}, ${b.longitud}</div>
+          </div>
+          <div class="mt-3 flex justify-end gap-2">
+            <button onclick="requestRecordAction('BITACORA', '${b.id_bitacora}', 'EDIT', '${b.actividad}', '${b.kilometraje}')" class="px-2.5 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs">
+              <i class="fas fa-edit mr-1"></i> Editar
+            </button>
+            <button onclick="requestRecordAction('BITACORA', '${b.id_bitacora}', 'DELETE')" class="px-2.5 py-1 rounded bg-red-500/20 hover:bg-red-500/30 text-red-300 text-xs">
+              <i class="fas fa-trash mr-1"></i> Eliminar
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderAbastecimientosTable() {
+      const tbody = document.getElementById('table-abastecimientos');
+      const filtered = filterByPlacaAndDate(dashData.abastecimientos, 'filter-abs-placa', 'filter-abs-from', 'filter-abs-to').reverse();
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-slate-400">Sin registros.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(a => `
+        <tr class="hover:bg-slate-800/40">
+          <td class="p-3 font-mono">${a.fecha_hora}</td>
+          <td class="p-3">${a.distrito}</td>
+          <td class="p-3"><span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold">${a.placa}</span></td>
+          <td class="p-3">${a.nombre_conductor} <span class="text-slate-400">(${a.cedula_conductor})</span></td>
+          <td class="p-3 font-bold text-amber-400">${a.galones} gal</td>
+          <td class="p-3 font-mono">${a.kilometraje} km</td>
+          <td class="p-3 text-right space-x-1">
+            <button onclick="requestRecordAction('ABASTECIMIENTO', '${a.id_registro}', 'EDIT', '${a.galones}', '${a.kilometraje}')" class="px-2 py-1 rounded bg-amber-500/20 text-amber-300 hover:bg-amber-500/30">
+              <i class="fas fa-edit"></i>
+            </button>
+            <button onclick="requestRecordAction('ABASTECIMIENTO', '${a.id_registro}', 'DELETE')" class="px-2 py-1 rounded bg-red-500/20 text-red-300 hover:bg-red-500/30">
+              <i class="fas fa-trash"></i>
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    // =========================================================================
+    // EDICIÓN Y ELIMINACIÓN CON CÓDIGO DE AUTORIZACIÓN DEL SUPERADMIN
+    // =========================================================================
+    async function requestRecordAction(tipoTabla, idRegistro, operation, val1 = '', val2 = '') {
+      let authCode = '';
+      if (currentUser.rol !== 'SUPERADMIN') {
+        authCode = prompt('ACCIÓN RESTRINGIDA: Ingrese el código de autorización temporal proporcionado por el SuperAdmin:');
+        if (!authCode) return;
+      } else {
+        if (!confirm(`¿Está seguro de ${operation === 'DELETE' ? 'ELIMINAR' : 'MODIFICAR'} este registro como SuperAdmin?`)) return;
+      }
+
+      let updatedFields = {};
+      if (operation === 'EDIT') {
+        if (tipoTabla === 'ABASTECIMIENTO') {
+          const galones = prompt('Editar cantidad de Galones:', val1);
+          const kilometraje = prompt('Editar Kilometraje:', val2);
+          if (galones === null || kilometraje === null) return;
+          updatedFields = { galones, kilometraje };
+        } else {
+          const actividad = prompt('Editar Actividad Operativa:', val1);
+          const kilometraje = prompt('Editar Kilometraje de Salida:', val2);
+          if (actividad === null || kilometraje === null) return;
+          updatedFields = { actividad, kilometraje };
+        }
+      }
+
+      try {
+        const resp = await apiCall('MODIFY_RECORD', {
+          user: currentUser,
+          authCode,
+          tipoTabla,
+          idRegistro,
+          operation,
+          updatedFields
+        });
+        showAlert(resp.message);
+        await refreshDashboardData();
+      } catch (err) {
+        showAlert(err.message, true);
+      }
+    }
+
+    async function handleGenerateAuthCode() {
+      try {
+        const minutos = document.getElementById('auth-minutos').value;
+        const resp = await apiCall('GENERATE_AUTH_CODE', {
+          superAdminEmail: currentUser.email,
+          minutos
+        });
+        document.getElementById('generated-code-display').classList.remove('hidden');
+        document.getElementById('auth-code-text').innerText = resp.code;
+      } catch (err) {
+        showAlert(err.message, true);
+      }
+    }
+
+    // =========================================================================
+    // MAPA GEORREFERENCIADO DE BITÁCORA
+    // =========================================================================
+    function renderMap() {
+      if (!mapInstance) {
+        mapInstance = L.map('map').setView([-1.8312, -78.1834], 7);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; OpenStreetMap'
+        }).addTo(mapInstance);
+      }
+
+      mapInstance.eachLayer(layer => {
+        if (layer instanceof L.Marker) mapInstance.removeLayer(layer);
+      });
+
+      const bounds = [];
+      dashData.bitacora.forEach(b => {
+        const lat = parseFloat(b.latitud);
+        const lng = parseFloat(b.longitud);
+        if (!isNaN(lat) && !isNaN(lng)) {
+          bounds.push([lat, lng]);
+          L.marker([lat, lng]).addTo(mapInstance).bindPopup(`
+            <div style="font-size:12px; color:#0f172a;">
+              <b>Placa:</b> ${b.placa} (${b.distrito})<br>
+              <b>Fecha:</b> ${b.fecha_hora}<br>
+              <b>Personal:</b> ${b.nombres_ocupantes}<br>
+              <b>Actividad:</b> ${b.actividad}<br>
+              <b>Km Salida:</b> ${b.kilometraje} km
+            </div>
+          `);
+        }
+      });
+
+      if (bounds.length > 0) mapInstance.fitBounds(bounds, { padding: [30, 30] });
+      mapInstance.invalidateSize();
+    }
+
+    // =========================================================================
+    // GESTIÓN DE FLOTA VEHICULAR Y PERSONAL ASIGNADO
+    // =========================================================================
+    function addPersonalRow(cedula = '', nombres = '', grado = '', funcion = 'CONDUCTOR') {
+      const container = document.getElementById('personal-rows-container');
+      const div = document.createElement('div');
+      div.className = 'p-2.5 rounded-lg bg-slate-900 border border-slate-700 space-y-2 personal-item';
+      div.innerHTML = `
+        <div class="flex gap-2">
+          <input type="text" placeholder="Cédula" value="${cedula}" required class="p-cedula w-1/2 bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs">
+          <input type="text" placeholder="Grado / Designación" value="${grado}" required class="p-grado w-1/2 bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs">
+        </div>
+        <div class="flex gap-2 items-center">
+          <input type="text" placeholder="Nombres y Apellidos" value="${nombres}" required class="p-nombres flex-1 bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs">
+          <select class="p-funcion bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs">
+            <option value="CONDUCTOR" ${funcion === 'CONDUCTOR' ? 'selected' : ''}>CONDUCTOR</option>
+            <option value="JP" ${funcion === 'JP' ? 'selected' : ''}>JP</option>
+            <option value="AUXILIAR" ${funcion === 'AUXILIAR' ? 'selected' : ''}>AUXILIAR</option>
+          </select>
+          <button type="button" onclick="this.closest('.personal-item').remove()" class="text-red-400 hover:text-red-300 px-1">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      `;
+      container.appendChild(div);
+    }
+
+    async function handleSaveVehiculo(e) {
+      e.preventDefault();
+      const vehiculo = {
+        placa: document.getElementById('veh-placa').value,
+        distrito: document.getElementById('veh-distrito').value,
+        marca_modelo: document.getElementById('veh-modelo').value
+      };
+      const personal = Array.from(document.querySelectorAll('.personal-item')).map(el => ({
+        cedula: el.querySelector('.p-cedula').value,
+        grado_designacion: el.querySelector('.p-grado').value,
+        nombres: el.querySelector('.p-nombres').value,
+        funcion: el.querySelector('.p-funcion').value
+      }));
+
+      try {
+        const resp = await apiCall('SAVE_VEHICULO', { vehiculo, personal });
+        showAlert(resp.message);
+        e.target.reset();
+        document.getElementById('personal-rows-container').innerHTML = '';
+        addPersonalRow();
+        await refreshDashboardData();
+        await loadPublicData();
+      } catch (err) {
+        showAlert(err.message, true);
+      }
+    }
+
+    function renderVehiculosList() {
+      const container = document.getElementById('vehiculos-list');
+      if (dashData.vehiculos.length === 0) {
+        container.innerHTML = '<p class="text-xs text-slate-400">No hay vehículos registrados en este distrito.</p>';
+        return;
+      }
+
+      container.innerHTML = dashData.vehiculos.map(v => {
+        const tripulacion = dashData.personal.filter(p => String(p.placa).toUpperCase() === String(v.placa).toUpperCase());
+        return `
+          <div class="p-4 rounded-xl bg-slate-900/90 border border-slate-700 flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between border-b border-slate-800 pb-2 mb-2">
+                <span class="font-bold text-sm text-indigo-400">${v.placa}</span>
+                <span class="text-[11px] px-2 py-0.5 rounded bg-slate-800 text-slate-300">${v.distrito}</span>
+              </div>
+              <p class="text-xs text-slate-300 mb-2">${v.marca_modelo}</p>
+              <div class="space-y-1 text-[11px] text-slate-400">
+                ${tripulacion.map(t => `
+                  <div>• <b>${t.funcion}:</b>${t.grado_designacion} ${t.nombres} (${t.cedula})</div>
+                `).join('')}
+              </div>
+            </div>
+            <div class="mt-4 pt-2 border-t border-slate-800 flex justify-end gap-2">
+              <button onclick='loadVehiculoForEdit(${JSON.stringify(v)}, ${JSON.stringify(tripulacion)})' class="px-2.5 py-1 rounded bg-sky-500/20 text-sky-300 text-xs">
+                Editar
+              </button>
+              <button onclick="handleDeleteVehiculo('${v.placa}')" class="px-2.5 py-1 rounded bg-red-500/20 text-red-300 text-xs">
+                Eliminar
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function loadVehiculoForEdit(v, tripulacion) {
+      document.getElementById('veh-placa').value = v.placa;
+      document.getElementById('veh-distrito').value = v.distrito;
+      document.getElementById('veh-modelo').value = v.marca_modelo;
+      const container = document.getElementById('personal-rows-container');
+      container.innerHTML = '';
+      tripulacion.forEach(t => addPersonalRow(t.cedula, t.nombres, t.grado_designacion, t.funcion));
+    }
+
+    async function handleDeleteVehiculo(placa) {
+      if (!confirm(`¿Eliminar el vehículo ${placa} y desvincular su personal?`)) return;
+      try {
+        const resp = await apiCall('DELETE_VEHICULO', { placa });
+        showAlert(resp.message);
+        await refreshDashboardData();
+        await loadPublicData();
+      } catch (err) {
+        showAlert(err.message, true);
+      }
+    }
+
+    // =========================================================================
+    // CREACIÓN DE USUARIOS Y GENERACIÓN DE QRs
+    // =========================================================================
+    function toggleUserDistritoInput() {
+      const rol = document.getElementById('usr-rol').value;
+      document.getElementById('usr-distrito-box').style.display = rol === 'SUPERADMIN' ? 'none' : 'block';
+    }
+
+    async function handleCreateUser(e) {
+      e.preventDefault();
+      try {
+        const newUser = {
+          email: document.getElementById('usr-email').value,
+          nombre: document.getElementById('usr-nombre').value,
+          rol: document.getElementById('usr-rol').value,
+          distrito: document.getElementById('usr-distrito').value.toUpperCase()
+        };
+        const resp = await apiCall('CREATE_USER', { adminUser: currentUser, newUser });
+        showAlert(resp.message);
+        e.target.reset();
+      } catch (err) {
+        showAlert(err.message, true);
+      }
+    }
+
+    function generateQRCodes() {
+      const baseUrl = window.location.origin + window.location.pathname;
+      const urlAbs = `${baseUrl}?form=abastecimiento`;
+      const urlBit = `${baseUrl}?form=bitacora`;
+
+      document.getElementById('url-abs-text').innerText = urlAbs;
+      document.getElementById('url-bit-text').innerText = urlBit;
+
+      new QRCode(document.getElementById('qr-abastecimiento'), { text: urlAbs, width: 180, height: 180 });
+      new QRCode(document.getElementById('qr-bitacora'), { text: urlBit, width: 180, height: 180 });
+    }
+  </script>
+</body>
+</html>
