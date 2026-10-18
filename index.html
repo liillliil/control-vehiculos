@@ -30,6 +30,14 @@
 </head>
 <body class="flex flex-col min-h-screen">
 
+  <!-- OVERLAY DE CARGA GLOBAL CENTRADO (JD - CARGANDO...) -->
+  <div id="global-loading-overlay" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex flex-col items-center justify-center space-y-3">
+    <div class="w-16 h-16 rounded-2xl bg-sky-500/20 border-2 border-sky-400 text-sky-300 font-bold text-2xl flex items-center justify-center shadow-lg shadow-sky-500/30 animate-bounce">
+      JD
+    </div>
+    <p class="text-sm font-semibold text-sky-300 tracking-wider animate-pulse">Cargando...</p>
+  </div>
+
   <header class="glass-card sticky top-0 z-40 px-4 py-3 flex items-center justify-between border-b border-slate-700/80">
     <div class="flex items-center space-x-3">
       <button onclick="toggleSidebar()" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sky-400"><i class="fas fa-bars text-lg"></i></button>
@@ -85,7 +93,7 @@
       <section id="sec-abastecimiento" class="view-section max-w-xl mx-auto glass-card p-6 rounded-2xl shadow-xl">
         <div class="flex items-center space-x-3 mb-6 border-b border-slate-700 pb-4">
           <div class="p-3 rounded-xl bg-amber-500/20 text-amber-400"><i class="fas fa-gas-pump text-2xl"></i></div>
-          <div><h2 class="text-xl font-bold">Registro de Abastecimiento</h2><p class="text-xs text-slate-400">Verificación de conductor y captura de factura en vivo</p></div>
+          <div><h2 class="text-xl font-bold">Registro de Abastecimiento</h2><p class="text-xs text-slate-400">Verificación de conductor y captura en vivo</p></div>
         </div>
         <form onsubmit="handleAbastecimientoSubmit(event)" class="space-y-4">
           <div><label class="block text-xs font-semibold uppercase text-slate-300 mb-1">1. Distrito Operativo</label><select id="abs-distrito" required onchange="filterPlacasByDistrito('abs-distrito', 'abs-placa')" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm"></select></div>
@@ -97,7 +105,7 @@
           </div>
           <div class="p-4 rounded-xl bg-slate-900/90 border border-slate-700 space-y-3">
             <div class="flex items-center justify-between">
-              <div><p class="text-xs font-bold text-amber-400 uppercase"><i class="fas fa-camera mr-1"></i> 6. Foto de Factura (Cámara en Vivo)</p><p class="text-[11px] text-slate-400">Captura directa obligatoria (Sin subida de galería)</p></div>
+              <div><p class="text-xs font-bold text-amber-400 uppercase"><i class="fas fa-camera mr-1"></i> 6. Foto de Factura (Cámara en Vivo)</p><p class="text-[11px] text-slate-400">Captura directa obligatoria</p></div>
               <button type="button" onclick="startLiveCamera()" class="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-xs font-bold"><i class="fas fa-video mr-1"></i> Activar Cámara</button>
             </div>
             <div id="camera-stream-box" class="hidden space-y-2">
@@ -106,11 +114,11 @@
             </div>
             <canvas id="snapshot-canvas" class="hidden"></canvas>
             <div id="snapshot-preview-box" class="hidden space-y-2">
-              <p class="text-[11px] text-emerald-400 font-semibold"><i class="fas fa-check-circle mr-1"></i> Fotografía PNG capturada:</p>
+              <p class="text-[11px] text-emerald-400 font-semibold"><i class="fas fa-check-circle mr-1"></i> Fotografía PNG capturada con éxito:</p>
               <img id="snapshot-preview-img" class="w-full max-h-56 object-contain rounded-lg border border-emerald-500/40 bg-slate-950 p-1">
               <button type="button" onclick="retakeSnapshot()" class="px-3 py-1 rounded bg-slate-800 text-xs text-amber-300"><i class="fas fa-redo mr-1"></i> Volver a Tomar</button>
             </div>
-            <input type="hidden" id="abs-factura-base64">
+            <input type="hidden" id="abs-factura-base64" required>
           </div>
           <button type="submit" class="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-sm shadow-lg"><i class="fas fa-save mr-2"></i> Registrar Abastecimiento</button>
         </form>
@@ -408,15 +416,29 @@
       if (window.innerWidth < 768) document.getElementById('sidebar').classList.add('-translate-x-full');
     }
 
+    // CONTROL DE VISIBILIDAD DE CARGA "JD - CARGANDO..."
+    function setLoading(isLoading) {
+      const overlay = document.getElementById('global-loading-overlay');
+      if (overlay) {
+        if (isLoading) overlay.classList.remove('hidden');
+        else overlay.classList.add('hidden');
+      }
+    }
+
     async function apiCall(action, payload = {}) {
-      const res = await fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ action, ...payload })
-      });
-      const json = await res.json();
-      if (!json.success) throw new Error(json.message);
-      return json.data;
+      setLoading(true);
+      try {
+        const res = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action, ...payload })
+        });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.message);
+        return json.data;
+      } finally {
+        setLoading(false);
+      }
     }
 
     async function loadPublicData() {
@@ -456,30 +478,52 @@
       });
     }
 
+    // CAMARA EN VIVO CORREGIDA
     async function startLiveCamera() {
       try {
         stopLiveCamera();
-        activeCameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
-        document.getElementById('live-video').srcObject = activeCameraStream;
+        activeCameraStream = await navigator.mediaDevices.getUserMedia({ 
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 960 } }, 
+          audio: false 
+        });
+        const videoEl = document.getElementById('live-video');
+        videoEl.srcObject = activeCameraStream;
+        await videoEl.play();
         document.getElementById('camera-stream-box').classList.remove('hidden');
         document.getElementById('snapshot-preview-box').classList.add('hidden');
-      } catch (err) { showAlert('Permita el acceso a la cámara para tomar la foto de la factura.', true); }
+      } catch (err) { 
+        showAlert('No se pudo abrir la cámara. Asegúrese de otorgar permisos en su navegador.', true); 
+      }
     }
 
     function stopLiveCamera() {
-      if (activeCameraStream) { activeCameraStream.getTracks().forEach(t => t.stop()); activeCameraStream = null; }
+      if (activeCameraStream) { 
+        activeCameraStream.getTracks().forEach(t => t.stop()); 
+        activeCameraStream = null; 
+      }
       const box = document.getElementById('camera-stream-box');
       if (box) box.classList.add('hidden');
     }
 
     function takeSnapshotPNG() {
-      const v = document.getElementById('live-video'), c = document.getElementById('snapshot-canvas');
-      const scale = v.videoWidth > 800 ? 800 / v.videoWidth : 1;
-      c.width = (v.videoWidth || 640) * scale; c.height = (v.videoHeight || 480) * scale;
-      c.getContext('2d').drawImage(v, 0, 0, c.width, c.height);
-      const png = c.toDataURL('image/png');
-      document.getElementById('abs-factura-base64').value = png;
-      document.getElementById('snapshot-preview-img').src = png;
+      const v = document.getElementById('live-video');
+      const c = document.getElementById('snapshot-canvas');
+      if (!v.videoWidth || !v.videoHeight) {
+        showAlert('Espere a que el video de la cámara esté listo.', true);
+        return;
+      }
+      const maxW = 800;
+      const scale = v.videoWidth > maxW ? maxW / v.videoWidth : 1;
+      c.width = v.videoWidth * scale; 
+      c.height = v.videoHeight * scale;
+      const ctx = c.getContext('2d');
+      ctx.drawImage(v, 0, 0, c.width, c.height);
+      
+      const pngDataUrl = c.toDataURL('image/png');
+      const hiddenInput = document.getElementById('abs-factura-base64');
+      hiddenInput.value = pngDataUrl;
+      
+      document.getElementById('snapshot-preview-img').src = pngDataUrl;
       stopLiveCamera();
       document.getElementById('snapshot-preview-box').classList.remove('hidden');
     }
@@ -544,7 +588,10 @@
     async function handleAbastecimientoSubmit(e) {
       e.preventDefault();
       const fotoPng = document.getElementById('abs-factura-base64').value;
-      if (!fotoPng) { showAlert('Capture la foto de la factura con la cámara en vivo.', true); return; }
+      if (!fotoPng) { 
+        showAlert('Es obligatorio activar la cámara en vivo y capturar la foto de la factura.', true); 
+        return; 
+      }
       try {
         const data = {
           distrito: document.getElementById('abs-distrito').value,
@@ -552,10 +599,12 @@
           cedula: document.getElementById('abs-cedula').value.trim(),
           galones: document.getElementById('abs-galones').value,
           kilometraje: document.getElementById('abs-km').value,
-          factura_base64: fotoPng, foto_factura: fotoPng
+          factura_base64: fotoPng, 
+          foto_factura: fotoPng
         };
         const resp = await apiCall('SUBMIT_ABASTECIMIENTO', { data });
-        showAlert(`${resp.message} Conductor: ${resp.conductor}`);
+        const alertaTxt = resp.alertas && resp.alertas.length ? ` | ALERTA: ${resp.alertas.join(' / ')}` : '';
+        showAlert(`${resp.message} Conductor: ${resp.conductor}${alertaTxt}`);
         e.target.reset();
         document.getElementById('abs-factura-base64').value = '';
         document.getElementById('snapshot-preview-box').classList.add('hidden');
