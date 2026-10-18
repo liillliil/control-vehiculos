@@ -1043,7 +1043,178 @@
       new QRCode(document.getElementById('qr-abastecimiento'), { text: u1, width: 180, height: 180 });
       new QRCode(document.getElementById('qr-bitacora'), { text: u2, width: 180, height: 180 });
     }
+
+    function submitAbastecimiento(data) {
+
+  // VALIDAR DATOS DEL FORMULARIO
+  if (!data || typeof data !== 'object') {
+    throw new Error('No se recibieron los datos del abastecimiento.');
+  }
+
+  const placaNorm = String(data.placa || '').trim().toUpperCase();
+  const cedula = String(data.cedula || '').trim();
+  const distrito = String(data.distrito || '').trim();
+  const galones = Number(data.galones);
+  const kilometraje = Number(data.kilometraje);
+
+  if (!placaNorm || !cedula || !distrito) {
+    throw new Error('Debe completar todos los campos obligatorios.');
+  }
+
+  if (!Number.isFinite(galones) || galones <= 0) {
+    throw new Error('Ingrese una cantidad válida de galones.');
+  }
+
+  if (!Number.isFinite(kilometraje) || kilometraje < 0) {
+    throw new Error('Ingrese un kilometraje válido.');
+  }
+
+  // FOTOGRAFÍA DE FACTURA
+  // No bloquear el registro cuando el frontend no envíe la imagen.
+  const fotoBase64 =
+    typeof data.foto_base64 === 'string'
+      ? data.foto_base64.trim()
+      : '';
+
+  // VALIDAR CONDUCTOR AUTORIZADO
+  const personal = getSheetData('Personal_Vehiculo');
+
+  const asignado = personal.find(p =>
+    String(p.placa).trim().toUpperCase() === placaNorm &&
+    String(p.cedula).trim() === cedula &&
+    String(p.funcion).trim().toUpperCase() === 'CONDUCTOR'
+  );
+
+  if (!asignado) {
+    throw new Error(
+      'La cédula ' + cedula +
+      ' no está registrada como CONDUCTOR autorizado ' +
+      'del vehículo con placa ' + placaNorm + '.'
+    );
+  }
+
+  // OBTENER TIPO DE COMBUSTIBLE
+  const vehiculos = getSheetData('Vehiculos');
+
+  const vehObj = vehiculos.find(v =>
+    String(v.placa).trim().toUpperCase() === placaNorm
+  );
+
+  const tipoCombustible = vehObj
+    ? String(vehObj.tipo_combustible || 'ECO').toUpperCase()
+    : 'ECO';
+
+  // REGISTRAR ABASTECIMIENTO
+  const sheet = SpreadsheetApp
+    .getActiveSpreadsheet()
+    .getSheetByName('Abastecimientos');
+
+  const id = 'ABS-' + new Date().getTime();
+  const timestamp = getNowUTC5();
+
+  sheet.appendRow([
+    id,
+    "'" + timestamp,
+    distrito,
+    placaNorm,
+    tipoCombustible,
+    cedula,
+    asignado.grado_designacion + ' ' + asignado.nombres,
+    galones,
+    0,
+    0,
+    kilometraje,
+    0,
+    0,
+    'CALCULANDO',
+    fotoBase64
+  ]);
+
+  // RECALCULAR CONSUMOS Y RECORRIDOS
+  const updatedList = recalculateAllFuelRecords();
+
+  const savedRecord = updatedList.find(
+    r => r.id_registro === id
+  );
+
+  // VERIFICAR ALERTAS
+  let alertNotice = '';
+
+  if (savedRecord && savedRecord.estado_alerta !== 'NORMAL') {
+
+    const estado = String(savedRecord.estado_alerta);
+
+    if (estado.includes('DOBLE TANQUEO')) {
+
+      dispatchSystemAlert(
+        distrito,
+        placaNorm,
+        'DOBLE ABASTECIMIENTO EN EL MISMO DÍA',
+        'El vehículo ' + placaNorm +
+        ' registró dos o más abastecimientos en la fecha ' +
+        timestamp.substring(0, 10) +
+        '. Conductor: ' + asignado.nombres + '.',
+        true
+      );
+    }
+
+    if (
+      estado.includes('EXCESO DE RECORRIDO') ||
+      estado.includes('RECORRIDO BAJO') ||
+      estado.includes('KM INCONSISTENTE')
+    ) {
+
+      dispatchSystemAlert(
+        distrito,
+        placaNorm,
+        'ANOMALÍA DE RECORRIDO VEHICULAR',
+        'El vehículo ' + placaNorm +
+        ' registró un recorrido de ' +
+        savedRecord.recorrido_km +
+        ' km (Promedio del vehículo: ' +
+        savedRecord.promedio_km +
+        ' km). Estado: ' + estado + '.',
+        false
+      );
+    }
+
+    alertNotice = ' | ALERTA GENERADA: ' + estado;
+  }
+
+  // RESPUESTA FINAL
+  return {
+    message:
+      'Abastecimiento registrado correctamente ($' +
+      (savedRecord ? savedRecord.total_usd : '0.00') +
+      ' USD).' + alertNotice,
+    conductor: asignado.nombres,
+    timestamp: timestamp
+  };
+}
+
+
+
+
+
+
+
+
+
   </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
