@@ -540,7 +540,7 @@
       if (modal) modal.classList.add('hidden');
     }
 
-    function takeFullscreenSnapshot() {
+        function takeFullscreenSnapshot() {
       const v = document.getElementById('fullscreen-video');
       const c = document.getElementById('snapshot-canvas');
       if (!v || !v.videoWidth || !v.videoHeight) {
@@ -557,18 +557,25 @@
       const pngDataUrl = c.toDataURL('image/png', 0.85);
       
       const hiddenInput = document.getElementById('abs-factura-base64');
-      if (hiddenInput) hiddenInput.value = pngDataUrl;
+      if (hiddenInput) {
+        hiddenInput.value = pngDataUrl;
+      }
 
       const previewImg = document.getElementById('snapshot-preview-img');
-      if (previewImg) previewImg.src = pngDataUrl;
+      if (previewImg) {
+        previewImg.src = pngDataUrl;
+      }
 
       stopFullscreenCamera();
       
       const previewBox = document.getElementById('snapshot-preview-box');
-      if (previewBox) previewBox.classList.remove('hidden');
+      if (previewBox) {
+        previewBox.classList.remove('hidden');
+      }
 
       showAlert('¡Fotografía de factura capturada con éxito!');
     }
+
 
     function openInvoiceModal(png, placa, fecha) {
       if (!png) { showAlert('Sin imagen de factura.', true); return; }
@@ -621,13 +628,17 @@
       );
     }
 
-    async function handleAbastecimientoSubmit(e) {
+        async function handleAbastecimientoSubmit(e) {
       e.preventDefault();
-      const fotoPng = document.getElementById('abs-factura-base64').value;
-      if (!fotoPng) { 
-        showAlert('Es obligatorio activar la cámara y tomar la foto de la factura en pantalla completa.', true); 
+      
+      const fotoInput = document.getElementById('abs-factura-base64');
+      const fotoPng = fotoInput ? fotoInput.value.trim() : '';
+
+      if (!fotoPng || fotoPng.length < 50) { 
+        showAlert('Es obligatorio tomar la fotografía en vivo de la factura de combustible.', true); 
         return; 
       }
+
       try {
         const data = {
           distrito: document.getElementById('abs-distrito').value,
@@ -638,17 +649,21 @@
           factura_base64: fotoPng, 
           foto_factura: fotoPng
         };
+
         const resp = await apiCall('SUBMIT_ABASTECIMIENTO', { data });
         const alertaTxt = resp.alertas && resp.alertas.length ? ` | ALERTA: ${resp.alertas.join(' / ')}` : '';
         showAlert(`${resp.message} Conductor: ${resp.conductor}${alertaTxt}`);
         
-        // LIMPIAR FORMULARIO COMPLETAMENTE TRAS ENVIO
+        // LIMPIAR FORMULARIO COMPLETAMENTE TRAS ENVIO EXITOSO
         document.getElementById('form-abastecimiento').reset();
-        document.getElementById('abs-factura-base64').value = '';
+        fotoInput.value = '';
         document.getElementById('snapshot-preview-box').classList.add('hidden');
         document.getElementById('snapshot-preview-img').src = '';
-      } catch (err) { showAlert(err.message, true); }
+      } catch (err) { 
+        showAlert(err.message, true); 
+      }
     }
+
 
     async function handleBitacoraSubmit(e) {
       e.preventDefault();
