@@ -4,385 +4,202 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SISTEMA DE REGISTRO DE ABASTECIMIENTO Y BITACORA DIGITAL</title>
-  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <!-- Leaflet Map CSS & JS (Gratuito sin API Key) -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <!-- QRCode.js para generar los QR desde el mismo sistema -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
   <style>
-    body {
-      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-      min-height: 100vh;
-      position: relative;
-      background-color: #0f172a;
-      color: #f8fafc;
-      overflow-x: hidden;
-    }
-    /* Imagen de fondo transparentada solicitada */
+    body { font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; position: relative; background-color: #0f172a; color: #f8fafc; overflow-x: hidden; }
     body::before {
-      content: "";
-      position: fixed;
-      inset: 0;
+      content: ""; position: fixed; inset: 0;
       background-image: url('https://londoncg.com/hs-fs/hubfs/junio%202024/Inteligencia%20artificial%20en%20el%20an%C3%A1lisis%20de%20datos/inteligencia-artificial-en-la-analitica-de-datos.png?width=900&height=500&name=inteligencia-artificial-en-la-analitica-de-datos.png');
-      background-size: cover;
-      background-position: center;
-      background-repeat: no-repeat;
-      opacity: 0.16;
-      z-index: -1;
-      pointer-events: none;
+      background-size: cover; background-position: center; background-repeat: no-repeat; opacity: 0.16; z-index: -1; pointer-events: none;
     }
-    .glass-card {
-      background: rgba(15, 23, 42, 0.82);
-      backdrop-filter: blur(12px);
-      border: 1px solid rgba(148, 163, 184, 0.2);
-    }
+    .glass-card { background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(12px); border: 1px solid rgba(148, 163, 184, 0.22); }
     .Watermark-dev {
-      position: fixed;
-      bottom: 10px;
-      right: 16px;
-      z-index: 9999;
-      background: rgba(15, 23, 42, 0.9);
-      border: 1px solid rgba(56, 189, 248, 0.4);
-      padding: 6px 14px;
-      border-radius: 9999px;
-      font-size: 0.78rem;
-      color: #38bdf8;
-      font-weight: 600;
-      letter-spacing: 0.03em;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+      position: fixed; bottom: 10px; right: 16px; z-index: 9999; background: rgba(15, 23, 42, 0.92);
+      border: 1px solid rgba(56, 189, 248, 0.45); padding: 6px 14px; border-radius: 9999px;
+      font-size: 0.78rem; color: #38bdf8; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.5);
     }
     #map { height: 460px; width: 100%; border-radius: 0.75rem; z-index: 10; }
   </style>
 </head>
 <body class="flex flex-col min-h-screen">
 
-  <!-- HEADER SUPERIOR -->
   <header class="glass-card sticky top-0 z-40 px-4 py-3 flex items-center justify-between border-b border-slate-700/80">
     <div class="flex items-center space-x-3">
-      <button onclick="toggleSidebar()" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sky-400 transition">
-        <i class="fas fa-bars text-lg"></i>
-      </button>
+      <button onclick="toggleSidebar()" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sky-400"><i class="fas fa-bars text-lg"></i></button>
       <div>
-        <h1 class="text-sm md:text-lg font-bold tracking-wide text-white uppercase">
-          SISTEMA DE REGISTRO DE ABASTECIMIENTO Y BITACORA DIGITAL
-        </h1>
+        <h1 class="text-sm md:text-lg font-bold tracking-wide text-white uppercase">SISTEMA DE REGISTRO DE ABASTECIMIENTO Y BITACORA DIGITAL</h1>
         <p id="activeUserBadge" class="text-xs text-sky-400 hidden"></p>
       </div>
     </div>
     <div class="flex items-center space-x-2">
       <span id="clockDisplay" class="hidden md:inline-block text-xs bg-slate-800/90 px-3 py-1.5 rounded-md border border-slate-700 text-slate-300 font-mono"></span>
-      <button id="btnLogout" onclick="logout()" class="hidden px-3 py-1.5 rounded-lg bg-red-600/80 hover:bg-red-600 text-xs font-semibold transition">
-        <i class="fas fa-sign-out-alt mr-1"></i> Salir
-      </button>
+      <button id="btnLogout" onclick="logout()" class="hidden px-3 py-1.5 rounded-lg bg-red-600/80 hover:bg-red-600 text-xs font-semibold"><i class="fas fa-sign-out-alt mr-1"></i> Salir</button>
     </div>
   </header>
 
   <div class="flex flex-1 relative">
-    <!-- MENU LATERAL DESPLEGABLE A LA IZQUIERDA -->
     <aside id="sidebar" class="glass-card w-72 border-r border-slate-700/80 flex flex-col justify-between transition-all duration-300 fixed md:static inset-y-0 left-0 z-30 -translate-x-full md:translate-x-0">
       <div class="p-4 space-y-6">
         <div>
           <p class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 px-2">Formularios Operativos (QR)</p>
           <nav class="space-y-1">
-            <button onclick="showSection('sec-abastecimiento')" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg hover:bg-sky-500/20 text-left text-sm transition">
-              <i class="fas fa-gas-pump text-amber-400 w-5"></i>
-              <span>1. Abastecimiento Combustible</span>
-            </button>
-            <button onclick="showSection('sec-bitacora-form')" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg hover:bg-sky-500/20 text-left text-sm transition">
-              <i class="fas fa-route text-emerald-400 w-5"></i>
-              <span>2. Bitácora de Salida (GPS)</span>
-            </button>
+            <button onclick="showSection('sec-abastecimiento')" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg hover:bg-sky-500/20 text-left text-sm"><i class="fas fa-gas-pump text-amber-400 w-5"></i><span>1. Abastecimiento Combustible</span></button>
+            <button onclick="showSection('sec-bitacora-form')" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg hover:bg-sky-500/20 text-left text-sm"><i class="fas fa-route text-emerald-400 w-5"></i><span>2. Bitácora de Salida (GPS)</span></button>
           </nav>
         </div>
-
         <hr class="border-slate-700/70">
-
-        <!-- OPCIONES DEL PANEL DE CONTROL -->
         <div>
           <p class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 px-2">Administración y Control</p>
-          <nav id="nav-admin" class="space-y-1">
-            <button onclick="showSection('sec-login')" id="menu-login-btn" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg hover:bg-sky-500/20 text-left text-sm transition">
-              <i class="fas fa-lock text-sky-400 w-5"></i>
-              <span>Acceso Panel de Control</span>
-            </button>
-
+          <nav class="space-y-1">
+            <button onclick="showSection('sec-login')" id="menu-login-btn" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg hover:bg-sky-500/20 text-left text-sm"><i class="fas fa-lock text-sky-400 w-5"></i><span>Acceso Panel de Control</span></button>
             <div id="admin-protected-links" class="space-y-1 hidden">
-              <button onclick="showSection('sec-dash-bitacora')" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg hover:bg-sky-500/20 text-left text-sm transition">
-                <i class="fas fa-stream text-sky-400 w-5"></i>
-                <span>Bitácora (Línea de Tiempo)</span>
-              </button>
-              <button onclick="showSection('sec-dash-abastecimiento')" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg hover:bg-sky-500/20 text-left text-sm transition">
-                <i class="fas fa-oil-can text-amber-400 w-5"></i>
-                <span>Historial Abastecimientos</span>
-              </button>
-              <button onclick="showSection('sec-dash-mapa')" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg hover:bg-sky-500/20 text-left text-sm transition">
-                <i class="fas fa-map-marked-alt text-emerald-400 w-5"></i>
-                <span>Mapa de Operaciones GPS</span>
-              </button>
-              <!-- NUEVA PÁGINA CATÁLOGOS EXCLUSIVA SUPERADMIN -->
-              <button id="menu-catalogos-btn" onclick="showSection('sec-dash-catalogos')" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg hover:bg-sky-500/20 text-left text-sm transition">
-                <i class="fas fa-folder-tree text-cyan-400 w-5"></i>
-                <span>Catálogos (Distritos / Grados)</span>
-              </button>
-              <button onclick="showSection('sec-dash-vehiculos')" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg hover:bg-sky-500/20 text-left text-sm transition">
-                <i class="fas fa-car-side text-indigo-400 w-5"></i>
-                <span>Flota Vehicular y Personal</span>
-              </button>
-              <button onclick="showSection('sec-dash-usuarios')" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg hover:bg-sky-500/20 text-left text-sm transition">
-                <i class="fas fa-users-cog text-purple-400 w-5"></i>
-                <span>Usuarios y Autorizaciones</span>
-              </button>
-              <button onclick="showSection('sec-dash-qrs')" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg hover:bg-sky-500/20 text-left text-sm transition">
-                <i class="fas fa-qrcode text-pink-400 w-5"></i>
-                <span>Códigos QR Oficiales</span>
-              </button>
+              <button onclick="showSection('sec-dash-bitacora')" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg hover:bg-sky-500/20 text-left text-sm"><i class="fas fa-stream text-sky-400 w-5"></i><span>Bitácora (Línea de Tiempo)</span></button>
+              <button onclick="showSection('sec-dash-abastecimiento')" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg hover:bg-sky-500/20 text-left text-sm"><i class="fas fa-oil-can text-amber-400 w-5"></i><span>Historial Abastecimientos</span></button>
+              <button onclick="showSection('sec-dash-analitica')" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg hover:bg-sky-500/20 text-left text-sm"><i class="fas fa-chart-line text-rose-400 w-5"></i><span>Analítica, PDF y Reportes</span></button>
+              <button onclick="showSection('sec-dash-mapa')" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg hover:bg-sky-500/20 text-left text-sm"><i class="fas fa-map-marked-alt text-emerald-400 w-5"></i><span>Mapa de Operaciones GPS</span></button>
+              <button id="menu-catalogos-btn" onclick="showSection('sec-dash-catalogos')" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg hover:bg-sky-500/20 text-left text-sm"><i class="fas fa-folder-tree text-cyan-400 w-5"></i><span>Catálogo y Precios Comb.</span></button>
+              <button onclick="showSection('sec-dash-vehiculos')" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg hover:bg-sky-500/20 text-left text-sm"><i class="fas fa-car-side text-indigo-400 w-5"></i><span>Flota Vehicular y Personal</span></button>
+              <button onclick="showSection('sec-dash-usuarios')" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg hover:bg-sky-500/20 text-left text-sm"><i class="fas fa-users-cog text-purple-400 w-5"></i><span>Usuarios y Autorizaciones</span></button>
+              <button onclick="showSection('sec-dash-qrs')" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg hover:bg-sky-500/20 text-left text-sm"><i class="fas fa-qrcode text-pink-400 w-5"></i><span>Códigos QR Oficiales</span></button>
             </div>
           </nav>
         </div>
       </div>
-
-      <div class="p-4 border-t border-slate-800 text-xs text-slate-400">
-        <p>Control de Flota & Operaciones</p>
-      </div>
+      <div class="p-4 border-t border-slate-800 text-xs text-slate-400">Control de Flota & Operaciones (GMT-5)</div>
     </aside>
 
-    <!-- CONTENIDO PRINCIPAL -->
     <main class="flex-1 p-4 md:p-8 overflow-y-auto pb-16">
-      
-      <!-- NOTIFICACIONES / ESTADO -->
       <div id="alertBox" class="hidden mb-6 p-4 rounded-xl border text-sm font-medium flex items-center justify-between">
         <span id="alertMessage"></span>
         <button onclick="document.getElementById('alertBox').classList.add('hidden')" class="ml-4 text-lg">&times;</button>
       </div>
 
-      <!-- SECCION 1: FORMULARIO QR ABASTECIMIENTO -->
+      <!-- 1. FORMULARIO QR ABASTECIMIENTO -->
       <section id="sec-abastecimiento" class="view-section max-w-xl mx-auto glass-card p-6 rounded-2xl shadow-xl">
         <div class="flex items-center space-x-3 mb-6 border-b border-slate-700 pb-4">
-          <div class="p-3 rounded-xl bg-amber-500/20 text-amber-400">
-            <i class="fas fa-gas-pump text-2xl"></i>
-          </div>
-          <div>
-            <h2 class="text-xl font-bold">Registro de Abastecimiento</h2>
-            <p class="text-xs text-slate-400">Verificación automática de conductor asignado a la unidad</p>
-          </div>
+          <div class="p-3 rounded-xl bg-amber-500/20 text-amber-400"><i class="fas fa-gas-pump text-2xl"></i></div>
+          <div><h2 class="text-xl font-bold">Registro de Abastecimiento</h2><p class="text-xs text-slate-400">Verificación de conductor y captura de factura en vivo</p></div>
         </div>
-
         <form onsubmit="handleAbastecimientoSubmit(event)" class="space-y-4">
-          <div>
-            <label class="block text-xs font-semibold uppercase text-slate-300 mb-1">1. Distrito Operativo</label>
-            <select id="abs-distrito" required onchange="filterPlacasByDistrito('abs-distrito', 'abs-placa')" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm focus:border-sky-400 focus:outline-none">
-              <option value="">Seleccione un distrito...</option>
-            </select>
-          </div>
-
-          <div>
-            <label class="block text-xs font-semibold uppercase text-slate-300 mb-1">2. Placa del Vehículo</label>
-            <select id="abs-placa" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm focus:border-sky-400 focus:outline-none">
-              <option value="">Primero escoja un distrito...</option>
-            </select>
-          </div>
-
-          <div>
-            <label class="block text-xs font-semibold uppercase text-slate-300 mb-1">3. Cédula del Conductor</label>
-            <input type="text" id="abs-cedula" required pattern="[0-9]{10}" title="Ingrese un número de cédula válido (10 dígitos)" placeholder="Ej: 1712345678" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm focus:border-sky-400 focus:outline-none">
-            <p class="text-[11px] text-slate-400 mt-1">El sistema validará que esta cédula conste con función CONDUCTOR en esta placa.</p>
-          </div>
-
+          <div><label class="block text-xs font-semibold uppercase text-slate-300 mb-1">1. Distrito Operativo</label><select id="abs-distrito" required onchange="filterPlacasByDistrito('abs-distrito', 'abs-placa')" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm"></select></div>
+          <div><label class="block text-xs font-semibold uppercase text-slate-300 mb-1">2. Placa del Vehículo</label><select id="abs-placa" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm"><option value="">Primero escoja un distrito...</option></select></div>
+          <div><label class="block text-xs font-semibold uppercase text-slate-300 mb-1">3. Cédula del Conductor</label><input type="text" id="abs-cedula" required oninput="this.value=this.value.replace(/[^0-9]/g,'')" maxlength="13" placeholder="Ej: 1712345678" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm"></div>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs font-semibold uppercase text-slate-300 mb-1">4. Cantidad de Galones</label>
-              <input type="number" step="0.01" id="abs-galones" required placeholder="Ej: 12.50" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm focus:border-sky-400 focus:outline-none">
-            </div>
-            <div>
-              <label class="block text-xs font-semibold uppercase text-slate-300 mb-1">5. Kilometraje Actual</label>
-              <input type="number" id="abs-km" required placeholder="Ej: 84520" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm focus:border-sky-400 focus:outline-none">
-            </div>
+            <div><label class="block text-xs font-semibold uppercase text-slate-300 mb-1">4. Galones</label><input type="number" step="0.01" id="abs-galones" required placeholder="Ej: 12.50" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm"></div>
+            <div><label class="block text-xs font-semibold uppercase text-slate-300 mb-1">5. Kilometraje Actual</label><input type="number" id="abs-km" required placeholder="Ej: 84520" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm"></div>
           </div>
-
-          <button type="submit" class="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-sm transition shadow-lg">
-            <i class="fas fa-save mr-2"></i> Registrar Abastecimiento
-          </button>
+          <div class="p-4 rounded-xl bg-slate-900/90 border border-slate-700 space-y-3">
+            <div class="flex items-center justify-between">
+              <div><p class="text-xs font-bold text-amber-400 uppercase"><i class="fas fa-camera mr-1"></i> 6. Foto de Factura (Cámara en Vivo)</p><p class="text-[11px] text-slate-400">Captura directa obligatoria (Sin subida de galería)</p></div>
+              <button type="button" onclick="startLiveCamera()" class="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-xs font-bold"><i class="fas fa-video mr-1"></i> Activar Cámara</button>
+            </div>
+            <div id="camera-stream-box" class="hidden space-y-2">
+              <video id="live-video" autoplay playsinline class="w-full max-h-64 object-cover rounded-lg border border-sky-500/50 bg-black"></video>
+              <button type="button" onclick="takeSnapshotPNG()" class="w-full py-2 rounded-lg bg-emerald-500 text-slate-950 font-bold text-xs"><i class="fas fa-camera-retro mr-1"></i> Capturar Fotograma PNG</button>
+            </div>
+            <canvas id="snapshot-canvas" class="hidden"></canvas>
+            <div id="snapshot-preview-box" class="hidden space-y-2">
+              <p class="text-[11px] text-emerald-400 font-semibold"><i class="fas fa-check-circle mr-1"></i> Fotografía PNG capturada:</p>
+              <img id="snapshot-preview-img" class="w-full max-h-56 object-contain rounded-lg border border-emerald-500/40 bg-slate-950 p-1">
+              <button type="button" onclick="retakeSnapshot()" class="px-3 py-1 rounded bg-slate-800 text-xs text-amber-300"><i class="fas fa-redo mr-1"></i> Volver a Tomar</button>
+            </div>
+            <input type="hidden" id="abs-factura-base64">
+          </div>
+          <button type="submit" class="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-sm shadow-lg"><i class="fas fa-save mr-2"></i> Registrar Abastecimiento</button>
         </form>
       </section>
 
-      <!-- SECCION 2: FORMULARIO QR BITACORA DE ACTIVIDADES -->
-      <section id="sec-bitacora-form" class="view-section hidden max-w-xl mx-auto glass-card p-6 rounded-2xl shadow-xl">
-        <div class="flex items-center space-x-3 mb-6 border-b border-slate-700 pb-4">
-          <div class="p-3 rounded-xl bg-emerald-500/20 text-emerald-400">
-            <i class="fas fa-route text-2xl"></i>
-          </div>
-          <div>
-            <h2 class="text-xl font-bold">Bitácora de Salida Operativa</h2>
-            <p class="text-xs text-slate-400">Captura obligatoria de coordenadas GPS y verificación de tripulación</p>
-          </div>
+      <!-- 2. FORMULARIO QR BITACORA -->
+      <section id="sec-bitacora-form" class="view-section hidden max-w-xl mx-auto glass-card p-6 rounded-2xl shadow-xl relative overflow-hidden">
+        <div id="gps-strict-lock" class="hidden absolute inset-0 z-30 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
+          <div class="w-16 h-16 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center mb-4 animate-pulse"><i class="fas fa-location-crosshairs text-3xl"></i></div>
+          <h3 class="text-lg font-bold text-white mb-2">Acceso a Ubicación Obligatorio</h3>
+          <p class="text-xs text-slate-300 max-w-sm mb-5">Para registrar la Bitácora Operativa debe activar el GPS de su teléfono y permitir el acceso a la ubicación.</p>
+          <button type="button" onclick="captureGPS()" class="px-5 py-2.5 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs shadow-lg"><i class="fas fa-sync-alt mr-1"></i> Activar y Verificar GPS</button>
         </div>
-
+        <div class="flex items-center space-x-3 mb-6 border-b border-slate-700 pb-4">
+          <div class="p-3 rounded-xl bg-emerald-500/20 text-emerald-400"><i class="fas fa-route text-2xl"></i></div>
+          <div><h2 class="text-xl font-bold">Bitácora de Salida Operativa</h2><p class="text-xs text-slate-400">Verificación de tripulación, Cartilla ECU 911 y GPS</p></div>
+        </div>
         <form onsubmit="handleBitacoraSubmit(event)" class="space-y-4">
-          <div>
-            <label class="block text-xs font-semibold uppercase text-slate-300 mb-1">1. Distrito Operativo</label>
-            <select id="bit-distrito" required onchange="filterPlacasByDistrito('bit-distrito', 'bit-placa')" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm focus:border-sky-400 focus:outline-none">
-              <option value="">Seleccione un distrito...</option>
-            </select>
-          </div>
-
-          <div>
-            <label class="block text-xs font-semibold uppercase text-slate-300 mb-1">2. Placa del Vehículo</label>
-            <select id="bit-placa" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm focus:border-sky-400 focus:outline-none">
-              <option value="">Primero escoja un distrito...</option>
-            </select>
-          </div>
-
-          <!-- CAMBIO 2: INPUT INDIVIDUAL POR CÉDULA CON BOTÓN + -->
+          <div><label class="block text-xs font-semibold uppercase text-slate-300 mb-1">1. Distrito Operativo</label><select id="bit-distrito" required onchange="filterPlacasByDistrito('bit-distrito', 'bit-placa')" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm"></select></div>
+          <div><label class="block text-xs font-semibold uppercase text-slate-300 mb-1">2. Placa del Vehículo</label><select id="bit-placa" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm"><option value="">Primero escoja un distrito...</option></select></div>
           <div>
             <div class="flex items-center justify-between mb-1.5">
-              <label class="block text-xs font-semibold uppercase text-slate-300">3. Cédula(s) del Personal en el Vehículo</label>
-              <button type="button" onclick="addBitacoraCedulaInput()" class="px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 text-xs font-bold flex items-center gap-1 transition">
-                <i class="fas fa-plus"></i> Agregar Cédula
-              </button>
+              <label class="block text-xs font-semibold uppercase text-slate-300">3. Cédula(s) del Personal</label>
+              <button type="button" onclick="addBitacoraCedulaInput()" class="px-2.5 py-1 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold">+ Agregar Cédula</button>
             </div>
-            <div id="bit-cedulas-container" class="space-y-2">
-              <!-- Se genera dinámicamente un input por cada cédula -->
-            </div>
-            <p class="text-[11px] text-slate-400 mt-1">Ingrese una sola cédula por casilla. Use el botón <b>+ Agregar Cédula</b> si van más ocupantes.</p>
+            <div id="bit-cedulas-container" class="space-y-2"></div>
           </div>
-
-          <div>
-            <label class="block text-xs font-semibold uppercase text-slate-300 mb-1">4. Actividad / Acción Operativa a Realizar</label>
-            <textarea id="bit-actividad" rows="3" required placeholder="Describa el patrullaje, operativo o comisión..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:border-sky-400 focus:outline-none"></textarea>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div><label class="block text-xs font-semibold uppercase text-amber-300 mb-1">4. Número de Cartilla del ECU</label><input type="text" id="bit-cartilla-ecu" required placeholder="Ej: ECU-2026-009841" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm uppercase"></div>
+            <div><label class="block text-xs font-semibold uppercase text-slate-300 mb-1">5. Kilometraje de Salida</label><input type="number" id="bit-km" required placeholder="Ej: 84535" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm"></div>
           </div>
-
-          <div>
-            <label class="block text-xs font-semibold uppercase text-slate-300 mb-1">5. Kilometraje de Salida</label>
-            <input type="number" id="bit-km" required placeholder="Ej: 84535" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm focus:border-sky-400 focus:outline-none">
-          </div>
-
-          <!-- BLOQUE DE UBICACIÓN GPS -->
+          <div><label class="block text-xs font-semibold uppercase text-slate-300 mb-1">6. Actividad / Acción Operativa</label><textarea id="bit-actividad" rows="3" required placeholder="Describa la acción operativa..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm"></textarea></div>
           <div class="p-3.5 rounded-xl bg-slate-900/90 border border-slate-700 flex items-center justify-between">
-            <div>
-              <p class="text-xs font-bold text-sky-400">Coordenadas del Registro (GPS)</p>
-              <p id="gps-status" class="text-xs text-slate-400 mt-0.5">Pendiente de captura...</p>
-              <input type="hidden" id="bit-lat">
-              <input type="hidden" id="bit-lng">
-            </div>
-            <button type="button" onclick="captureGPS()" class="px-3 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-xs font-semibold transition">
-              <i class="fas fa-location-crosshairs mr-1"></i> Obtener Ubicación
-            </button>
+            <div><p class="text-xs font-bold text-sky-400">Coordenadas del Registro (GPS)</p><p id="gps-status" class="text-xs text-slate-400 mt-0.5">Verificando GPS...</p><input type="hidden" id="bit-lat"><input type="hidden" id="bit-lng"></div>
+            <button type="button" onclick="captureGPS()" class="px-3 py-2 rounded-lg bg-sky-600 text-xs font-semibold">Actualizar GPS</button>
           </div>
-
-          <button type="submit" class="w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm transition shadow-lg">
-            <i class="fas fa-paper-plane mr-2"></i> Registrar Salida en Bitácora
-          </button>
+          <button type="submit" class="w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm shadow-lg"><i class="fas fa-paper-plane mr-2"></i> Registrar Salida en Bitácora</button>
         </form>
       </section>
 
-      <!-- SECCION 3: LOGIN PANEL DE CONTROL -->
+      <!-- 3. LOGIN -->
       <section id="sec-login" class="view-section hidden max-w-md mx-auto glass-card p-6 rounded-2xl shadow-xl">
-        <div class="text-center mb-6">
-          <div class="w-14 h-14 rounded-2xl bg-sky-500/20 text-sky-400 flex items-center justify-center mx-auto mb-3">
-            <i class="fas fa-user-shield text-2xl"></i>
-          </div>
-          <h2 class="text-xl font-bold">Acceso Administrativo</h2>
-          <p class="text-xs text-slate-400">Ingrese con su correo institucional/asignado y contraseña</p>
-        </div>
-
+        <div class="text-center mb-6"><h2 class="text-xl font-bold">Acceso Administrativo</h2><p class="text-xs text-slate-400">Ingrese con su correo y contraseña</p></div>
         <form onsubmit="handleLogin(event)" class="space-y-4">
-          <div>
-            <label class="block text-xs font-semibold uppercase text-slate-300 mb-1">Usuario (Correo)</label>
-            <input type="email" id="login-email" required placeholder="clavesjd@gmail.com" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm">
-          </div>
-          <div>
-            <label class="block text-xs font-semibold uppercase text-slate-300 mb-1">Contraseña</label>
-            <input type="password" id="login-pass" required placeholder="••••••••" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm">
-          </div>
-          <button type="submit" class="w-full py-3 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-sm transition">
-            Ingresar al Panel
-          </button>
+          <div><label class="block text-xs font-semibold uppercase text-slate-300 mb-1">Usuario (Correo)</label><input type="email" id="login-email" required placeholder="clavesjd@gmail.com" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm"></div>
+          <div><label class="block text-xs font-semibold uppercase text-slate-300 mb-1">Contraseña</label><input type="password" id="login-pass" required placeholder="••••••••" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm"></div>
+          <button type="submit" class="w-full py-3 rounded-xl bg-sky-500 text-slate-950 font-bold text-sm">Ingresar al Panel</button>
         </form>
-
-        <!-- MODAL CAMBIO DE CLAVE TEMPORAL EN PRIMER INGRESO -->
         <div id="box-change-pass" class="hidden mt-6 pt-6 border-t border-slate-700">
           <h3 class="text-sm font-bold text-amber-400 mb-2">Cambio Obligatorio de Clave Temporal</h3>
-          <p class="text-xs text-slate-300 mb-3">Por seguridad, defina su nueva contraseña personal antes de continuar.</p>
-          <input type="password" id="new-personal-pass" placeholder="Nueva contraseña segura" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm mb-3">
-          <button onclick="submitNewPassword()" class="w-full py-2.5 rounded-lg bg-emerald-500 text-slate-950 font-bold text-xs">
-            Actualizar Contraseña y Entrar
-          </button>
+          <input type="password" id="new-personal-pass" placeholder="Nueva contraseña personal" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm mb-3">
+          <button onclick="submitNewPassword()" class="w-full py-2.5 rounded-lg bg-emerald-500 text-slate-950 font-bold text-xs">Actualizar Contraseña y Entrar</button>
         </div>
       </section>
 
-      <!-- SECCION 4: BITACORA EN LINEA DE TIEMPO -->
+      <!-- 4. BITACORA TIMELINE -->
       <section id="sec-dash-bitacora" class="view-section hidden space-y-6">
         <div class="glass-card p-5 rounded-2xl flex flex-col md:flex-row md:items-end justify-between gap-4">
-          <div>
-            <h2 class="text-xl font-bold flex items-center gap-2">
-              <i class="fas fa-stream text-sky-400"></i> Línea de Tiempo de Bitácora Operativa
-            </h2>
-            <p class="text-xs text-slate-400">Visualización cronológica de acciones operativas y salidas de vehículos</p>
-          </div>
-          <!-- FILTROS -->
+          <div><h2 class="text-xl font-bold"><i class="fas fa-stream text-sky-400 mr-2"></i>Línea de Tiempo de Bitácora</h2></div>
           <div class="flex flex-wrap items-end gap-3">
-            <div>
-              <label class="block text-[11px] text-slate-400">Placa</label>
-              <input type="text" id="filter-bit-placa" oninput="renderBitacoraTimeline()" placeholder="Todas..." class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs">
-            </div>
-            <div>
-              <label class="block text-[11px] text-slate-400">Desde</label>
-              <input type="date" id="filter-bit-from" onchange="renderBitacoraTimeline()" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs">
-            </div>
-            <div>
-              <label class="block text-[11px] text-slate-400">Hasta</label>
-              <input type="date" id="filter-bit-to" onchange="renderBitacoraTimeline()" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs">
-            </div>
+            <div><label class="block text-[11px] text-slate-400">Placa</label><input type="text" id="filter-bit-placa" oninput="renderBitacoraTimeline()" placeholder="Todas..." class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs"></div>
+            <div><label class="block text-[11px] text-slate-400">Desde</label><input type="date" id="filter-bit-from" onchange="renderBitacoraTimeline()" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs"></div>
+            <div><label class="block text-[11px] text-slate-400">Hasta</label><input type="date" id="filter-bit-to" onchange="renderBitacoraTimeline()" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs"></div>
+            <button onclick="exportBitacoraCSV()" class="px-3 py-1.5 rounded-lg bg-emerald-600 text-xs font-bold"><i class="fas fa-file-csv mr-1"></i> CSV/Excel</button>
           </div>
         </div>
-
-        <!-- CONTENEDOR TIMELINE -->
-        <div id="timeline-container" class="relative border-l-2 border-sky-500/50 ml-4 md:ml-8 pl-6 space-y-6">
-          <!-- Renderizado dinámico -->
-        </div>
+        <div id="timeline-container" class="relative border-l-2 border-sky-500/50 ml-4 md:ml-8 pl-6 space-y-6"></div>
       </section>
 
-      <!-- SECCION 5: HISTORIAL DE ABASTECIMIENTOS -->
+      <!-- 5. HISTORIAL ABASTECIMIENTOS -->
       <section id="sec-dash-abastecimiento" class="view-section hidden space-y-6">
+        <div id="anomalies-banner" class="hidden glass-card p-4 rounded-2xl border border-red-500/50 bg-red-950/30 space-y-2">
+          <h3 class="text-sm font-bold text-red-300"><i class="fas fa-triangle-exclamation text-red-400 mr-1"></i> Alertas Automáticas Detectadas</h3>
+          <div id="anomalies-list" class="space-y-1 text-xs text-red-200 max-h-40 overflow-y-auto"></div>
+        </div>
         <div class="glass-card p-5 rounded-2xl flex flex-col md:flex-row md:items-end justify-between gap-4">
-          <div>
-            <h2 class="text-xl font-bold flex items-center gap-2">
-              <i class="fas fa-gas-pump text-amber-400"></i> Control de Abastecimiento de Combustible
-            </h2>
-            <p class="text-xs text-slate-400">Auditoría por unidad, galones despachados y kilometraje</p>
-          </div>
+          <div><h2 class="text-xl font-bold"><i class="fas fa-gas-pump text-amber-400 mr-2"></i>Historial de Abastecimientos</h2></div>
           <div class="flex flex-wrap items-end gap-3">
-            <div>
-              <label class="block text-[11px] text-slate-400">Placa</label>
-              <input type="text" id="filter-abs-placa" oninput="renderAbastecimientosTable()" placeholder="Todas..." class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs">
-            </div>
-            <div>
-              <label class="block text-[11px] text-slate-400">Desde</label>
-              <input type="date" id="filter-abs-from" onchange="renderAbastecimientosTable()" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs">
-            </div>
-            <div>
-              <label class="block text-[11px] text-slate-400">Hasta</label>
-              <input type="date" id="filter-abs-to" onchange="renderAbastecimientosTable()" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs">
-            </div>
+            <div><label class="block text-[11px] text-slate-400">Placa</label><input type="text" id="filter-abs-placa" oninput="renderAbastecimientosTable()" placeholder="Todas..." class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs"></div>
+            <div><label class="block text-[11px] text-slate-400">Desde</label><input type="date" id="filter-abs-from" onchange="renderAbastecimientosTable()" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs"></div>
+            <div><label class="block text-[11px] text-slate-400">Hasta</label><input type="date" id="filter-abs-to" onchange="renderAbastecimientosTable()" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs"></div>
+            <button onclick="exportAbastecimientosCSV()" class="px-3 py-1.5 rounded-lg bg-emerald-600 text-xs font-bold"><i class="fas fa-file-excel mr-1"></i> CSV/Excel</button>
           </div>
         </div>
-
         <div class="glass-card rounded-2xl overflow-x-auto">
           <table class="w-full text-left border-collapse text-xs">
             <thead>
               <tr class="border-b border-slate-700 bg-slate-900/60 text-slate-300 uppercase">
-                <th class="p-3.5">Fecha / Hora</th>
-                <th class="p-3.5">Distrito</th>
-                <th class="p-3.5">Placa</th>
-                <th class="p-3.5">Conductor Verificado</th>
-                <th class="p-3.5">Galones</th>
-                <th class="p-3.5">Kilometraje</th>
-                <th class="p-3.5 text-right">Acciones</th>
+                <th class="p-3">Fecha/Hora</th><th class="p-3">Distrito</th><th class="p-3">Placa</th><th class="p-3">Conductor</th><th class="p-3">Galones</th><th class="p-3">Precio</th><th class="p-3">Total USD</th><th class="p-3">Km Actual</th><th class="p-3">Recorrido</th><th class="p-3">Factura</th><th class="p-3 text-right">Acciones</th>
               </tr>
             </thead>
             <tbody id="table-abastecimientos" class="divide-y divide-slate-800"></tbody>
@@ -390,237 +207,204 @@
         </div>
       </section>
 
-      <!-- SECCION 6: MAPA GEORREFERENCIADO -->
-      <section id="sec-dash-mapa" class="view-section hidden space-y-4">
-        <div class="glass-card p-5 rounded-2xl">
-          <h2 class="text-xl font-bold flex items-center gap-2 mb-1">
-            <i class="fas fa-map-marked-alt text-emerald-400"></i> Mapa de Inicios de Actividad (Bitácora)
-          </h2>
-          <p class="text-xs text-slate-400 mb-4">Ubicaciones exactas desde donde las unidades registraron su salida operativa</p>
-          <div id="map"></div>
+      <!-- 6. ANALITICA, CHART.JS Y PDF -->
+      <section id="sec-dash-analitica" class="view-section hidden space-y-6">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="lg:col-span-2 glass-card p-5 rounded-2xl space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
+              <h2 class="text-lg font-bold text-rose-400"><i class="fas fa-chart-line mr-1"></i> Tendencia de Gasto en Combustible (USD)</h2>
+              <div class="flex gap-2">
+                <select id="chart-group-by" onchange="renderFuelTrendChart()" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs">
+                  <option value="DAY">Por Día</option><option value="WEEK">Por Semana del Año</option><option value="MONTH">Por Mes</option>
+                </select>
+                <select id="chart-placa-filter" onchange="renderFuelTrendChart()" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs"><option value="">Todos los Vehículos</option></select>
+              </div>
+            </div>
+            <div class="h-80 w-full"><canvas id="fuelTrendChartCanvas"></canvas></div>
+          </div>
+          <div class="glass-card p-5 rounded-2xl space-y-4 flex flex-col justify-between">
+            <div class="space-y-3">
+              <h3 class="text-lg font-bold text-sky-400"><i class="fas fa-file-pdf mr-1"></i> Informe PDF Oficial por Vehículo</h3>
+              <div><label class="block text-xs text-slate-400 mb-1">Seleccione Placa</label><select id="pdf-placa-select" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs"></select></div>
+              <div class="grid grid-cols-2 gap-2">
+                <div><label class="block text-[11px] text-slate-400">Desde</label><input type="date" id="pdf-from" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs"></div>
+                <div><label class="block text-[11px] text-slate-400">Hasta</label><input type="date" id="pdf-to" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs"></div>
+              </div>
+              <button onclick="generateVehiclePDFReport()" class="w-full py-2.5 rounded-xl bg-rose-500 text-slate-950 font-bold text-xs"><i class="fas fa-file-pdf mr-1"></i> Descargar Informe PDF</button>
+            </div>
+            <div class="pt-4 border-t border-slate-800 space-y-2">
+              <button onclick="exportAbastecimientosCSV()" class="w-full py-2 rounded-lg bg-slate-800 text-xs text-slate-200"><i class="fas fa-download text-amber-400 mr-1"></i> Descargar Base Abastecimientos (.csv)</button>
+              <button onclick="exportBitacoraCSV()" class="w-full py-2 rounded-lg bg-slate-800 text-xs text-slate-200"><i class="fas fa-download text-emerald-400 mr-1"></i> Descargar Base Bitácora (.csv)</button>
+            </div>
+          </div>
         </div>
       </section>
 
-      <!-- CAMBIO 1: NUEVA SECCION DE CATALOGOS (EXCLUSIVO SUPERADMIN) -->
+      <!-- 7. MAPA -->
+      <section id="sec-dash-mapa" class="view-section hidden space-y-4"><div class="glass-card p-5 rounded-2xl"><h2 class="text-xl font-bold mb-3"><i class="fas fa-map-marked-alt text-emerald-400 mr-2"></i>Mapa de Inicios de Actividad</h2><div id="map"></div></div></section>
+
+      <!-- 8. CATALOGOS Y PRECIOS DE COMBUSTIBLE -->
       <section id="sec-dash-catalogos" class="view-section hidden space-y-6">
-        <div class="glass-card p-5 rounded-2xl">
-          <h2 class="text-xl font-bold flex items-center gap-2 text-cyan-400">
-            <i class="fas fa-folder-tree"></i> Administración de Catálogos del Sistema
-          </h2>
-          <p class="text-xs text-slate-400 mt-1">
-            Configure las opciones oficiales que aparecerán en los selectores desplegables de <b>Distrito</b> y <b>Grado / Designación</b> en todo el sistema.
-          </p>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <!-- CATALOGO DISTRITOS -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div class="glass-card p-5 rounded-2xl space-y-4">
-            <h3 class="text-base font-bold text-sky-400 flex items-center gap-2">
-              <i class="fas fa-map-location-dot"></i> Catálogo de Distritos
-            </h3>
+            <h3 class="text-base font-bold text-sky-400">Catálogo Distrito</h3>
             <form onsubmit="handleAddCatalogo(event, 'DISTRITO', 'cat-input-distrito')" class="flex gap-2">
-              <input type="text" id="cat-input-distrito" required placeholder="Ej: DISTRITO MODELO" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs uppercase">
-              <button type="submit" class="px-4 py-2 rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs transition">
-                <i class="fas fa-plus mr-1"></i> Agregar
-              </button>
+              <input type="text" id="cat-input-distrito" required placeholder="Ej: DISTRITO SUR" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs uppercase">
+              <button type="submit" class="px-4 py-2 rounded-lg bg-sky-500 text-slate-950 font-bold text-xs">+ Agregar</button>
             </form>
-            <div id="list-cat-distrito" class="space-y-1.5 max-h-72 overflow-y-auto pr-1"></div>
+            <div id="list-cat-distrito" class="space-y-1.5 max-h-64 overflow-y-auto"></div>
           </div>
-
-          <!-- CATALOGO GRADO / DESIGNACION -->
           <div class="glass-card p-5 rounded-2xl space-y-4">
-            <h3 class="text-base font-bold text-emerald-400 flex items-center gap-2">
-              <i class="fas fa-id-badge"></i> Catálogo de Grado / Designación
-            </h3>
+            <h3 class="text-base font-bold text-emerald-400">Catálogo Grado / Designación</h3>
             <form onsubmit="handleAddCatalogo(event, 'GRADO', 'cat-input-grado')" class="flex gap-2">
-              <input type="text" id="cat-input-grado" required placeholder="Ej: Cptn. / Tnte. / Sgop." class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs">
-              <button type="submit" class="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition">
-                <i class="fas fa-plus mr-1"></i> Agregar
-              </button>
+              <input type="text" id="cat-input-grado" required placeholder="Ej: Mayr. / Cptn." class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs">
+              <button type="submit" class="px-4 py-2 rounded-lg bg-emerald-500 text-slate-950 font-bold text-xs">+ Agregar</button>
             </form>
-            <div id="list-cat-grado" class="space-y-1.5 max-h-72 overflow-y-auto pr-1"></div>
+            <div id="list-cat-grado" class="space-y-1.5 max-h-64 overflow-y-auto"></div>
+          </div>
+          <div class="glass-card p-5 rounded-2xl space-y-4">
+            <h3 class="text-base font-bold text-amber-400">Precios Combustible por Vigencia</h3>
+            <form onsubmit="handleAddFuelPrice(event)" class="space-y-2">
+              <div class="grid grid-cols-2 gap-2">
+                <select id="price-tipo" required class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-2 text-xs"><option value="ECO">ECO</option><option value="SUPER">SUPER</option><option value="DIESEL">DIESEL</option></select>
+                <input type="number" step="0.001" id="price-valor" required placeholder="USD/Gal" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-2 text-xs">
+              </div>
+              <div class="flex gap-2">
+                <input type="date" id="price-fecha" required class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-2 text-xs">
+                <button type="submit" class="px-3 py-2 rounded-lg bg-amber-500 text-slate-950 font-bold text-xs">Guardar y Recalcular</button>
+              </div>
+            </form>
+            <div id="list-fuel-prices" class="space-y-1.5 max-h-52 overflow-y-auto"></div>
           </div>
         </div>
       </section>
 
-      <!-- SECCION 7: GESTION DE VEHICULOS Y PERSONAL -->
+      <!-- 9. VEHICULOS -->
       <section id="sec-dash-vehiculos" class="view-section hidden grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div class="glass-card p-5 rounded-2xl space-y-4">
           <h3 class="text-lg font-bold text-indigo-400">Registrar / Editar Vehículo</h3>
           <form onsubmit="handleSaveVehiculo(event)" class="space-y-3">
-            <div>
-              <label class="block text-xs text-slate-300 mb-1">Placa del Vehículo</label>
-              <input type="text" id="veh-placa" required placeholder="Ej: PEA-1234" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs uppercase">
+            <div><label class="block text-xs text-slate-300 mb-1">Placa</label><input type="text" id="veh-placa" required placeholder="Ej: PEA-1234" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs uppercase"></div>
+            <div class="grid grid-cols-2 gap-2">
+              <div><label class="block text-xs text-slate-300 mb-1">Distrito</label><select id="veh-distrito" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-2 text-xs"></select></div>
+              <div><label class="block text-xs text-amber-300 mb-1">Combustible</label><select id="veh-combustible" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-2 text-xs font-bold"><option value="ECO">ECO ($3.17)</option><option value="SUPER">SUPER ($5.42)</option><option value="DIESEL">DIESEL ($3.11)</option></select></div>
             </div>
-            <div>
-              <label class="block text-xs text-slate-300 mb-1">Distrito Asignado (Catálogo)</label>
-              <select id="veh-distrito" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs">
-                <option value="">Seleccione un distrito...</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-xs text-slate-300 mb-1">Marca / Modelo / Tipo</label>
-              <input type="text" id="veh-modelo" required placeholder="Ej: Patrullero Kia Sportage" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs">
-            </div>
-
+            <div><label class="block text-xs text-slate-300 mb-1">Marca / Modelo</label><input type="text" id="veh-modelo" required placeholder="Ej: Kia Sportage" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs"></div>
             <div class="pt-2 border-t border-slate-700">
-              <div class="flex items-center justify-between mb-2">
-                <span class="text-xs font-bold text-sky-400">Personal Asignado al Vehículo</span>
-                <button type="button" onclick="addPersonalRow()" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[11px] text-sky-400">
-                  + Añadir Persona
-                </button>
-              </div>
-              <div id="personal-rows-container" class="space-y-2 max-h-64 overflow-y-auto pr-1"></div>
+              <div class="flex items-center justify-between mb-2"><span class="text-xs font-bold text-sky-400">Personal Asignado</span><button type="button" onclick="addPersonalRow()" class="px-2 py-1 rounded bg-slate-800 text-[11px] text-sky-400">+ Añadir Persona</button></div>
+              <div id="personal-rows-container" class="space-y-2 max-h-64 overflow-y-auto"></div>
             </div>
-
-            <button type="submit" class="w-full py-2.5 rounded-xl bg-indigo-500 hover:bg-indigo-400 text-slate-950 font-bold text-xs transition">
-              Guardar Vehículo y Personal
-            </button>
+            <button type="submit" class="w-full py-2.5 rounded-xl bg-indigo-500 text-slate-950 font-bold text-xs">Guardar Vehículo y Personal</button>
           </form>
         </div>
-
-        <div class="lg:col-span-2 glass-card p-5 rounded-2xl">
-          <h3 class="text-lg font-bold mb-4">Flota Vehicular Registrada</h3>
-          <div id="vehiculos-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
-        </div>
+        <div class="lg:col-span-2 glass-card p-5 rounded-2xl"><h3 class="text-lg font-bold mb-4">Flota Vehicular Registrada</h3><div id="vehiculos-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div></div>
       </section>
 
-      <!-- SECCION 8: USUARIOS Y CODIGOS DE AUTORIZACION -->
+      <!-- 10. USUARIOS Y CODIGOS -->
       <section id="sec-dash-usuarios" class="view-section hidden grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div class="glass-card p-5 rounded-2xl space-y-4">
           <h3 class="text-lg font-bold text-purple-400">Crear Nuevo Usuario</h3>
-          <p class="text-xs text-slate-400">El sistema enviará automáticamente una clave temporal al correo ingresado.</p>
           <form onsubmit="handleCreateUser(event)" class="space-y-3">
-            <div>
-              <label class="block text-xs text-slate-300 mb-1">Correo Electrónico</label>
-              <input type="email" id="usr-email" required placeholder="usuario@dominio.com" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs">
-            </div>
-            <div>
-              <label class="block text-xs text-slate-300 mb-1">Grado y Nombres Completos</label>
-              <input type="text" id="usr-nombre" required placeholder="Ej: Tnte. Carlos Pérez" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs">
-            </div>
-            <div>
-              <label class="block text-xs text-slate-300 mb-1">Rol en el Sistema</label>
-              <select id="usr-rol" onchange="toggleUserDistritoInput()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs">
-                <option value="ADMIN">ADMIN (Limitado a su Distrito)</option>
-                <option value="SUPERADMIN" id="opt-superadmin">SUPERADMIN (Acceso Total Nacional)</option>
-              </select>
-            </div>
-            <div id="usr-distrito-box">
-              <label class="block text-xs text-slate-300 mb-1">Distrito Asignado (Catálogo)</label>
-              <select id="usr-distrito" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs">
-                <option value="">Seleccione un distrito...</option>
-              </select>
-            </div>
-            <button type="submit" class="w-full py-2.5 rounded-xl bg-purple-500 hover:bg-purple-400 text-slate-950 font-bold text-xs transition">
-              Crear Usuario y Enviar Clave Temporal
-            </button>
+            <div><label class="block text-xs text-slate-300 mb-1">Correo Electrónico</label><input type="email" id="usr-email" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs"></div>
+            <div><label class="block text-xs text-slate-300 mb-1">Grado y Nombres</label><input type="text" id="usr-nombre" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs"></div>
+            <div><label class="block text-xs text-slate-300 mb-1">Rol</label><select id="usr-rol" onchange="toggleUserDistritoInput()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs"><option value="ADMIN">ADMIN (Por Distrito)</option><option value="SUPERADMIN" id="opt-superadmin">SUPERADMIN (Total)</option></select></div>
+            <div id="usr-distrito-box"><label class="block text-xs text-slate-300 mb-1">Distrito Asignado</label><select id="usr-distrito" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs"></select></div>
+            <button type="submit" class="w-full py-2.5 rounded-xl bg-purple-500 text-slate-950 font-bold text-xs">Crear Usuario y Enviar Clave Temporal</button>
           </form>
         </div>
-
-        <!-- PANEL EXCLUSIVO SUPERADMIN PARA GENERAR CODIGO TEMPORAL -->
         <div id="superadmin-auth-box" class="glass-card p-5 rounded-2xl space-y-4">
-          <h3 class="text-lg font-bold text-amber-400">Generador de Código de Autorización Temporal</h3>
-          <p class="text-xs text-slate-300">
-            Como <b>SuperAdmin</b>, usted puede editar o eliminar registros directamente. Si un <b>Admin de Distrito</b> necesita corregir o eliminar un registro, genérele un código temporal de un solo uso:
-          </p>
+          <h3 class="text-lg font-bold text-amber-400">Código Temporal de Autorización</h3>
           <div class="flex items-end gap-3">
-            <div class="flex-1">
-              <label class="block text-xs text-slate-400 mb-1">Tiempo de Validez (Minutos)</label>
-              <input type="number" id="auth-minutos" value="15" min="1" max="120" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm">
-            </div>
-            <button onclick="handleGenerateAuthCode()" class="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs">
-              Generar Código
-            </button>
+            <div class="flex-1"><label class="block text-xs text-slate-400 mb-1">Validez (Minutos)</label><input type="number" id="auth-minutos" value="15" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm"></div>
+            <button onclick="handleGenerateAuthCode()" class="px-4 py-2.5 rounded-xl bg-amber-500 text-slate-950 font-bold text-xs">Generar Código</button>
           </div>
-          <div id="generated-code-display" class="hidden p-4 rounded-xl bg-slate-900 border border-amber-500/50 text-center">
-            <p class="text-xs text-slate-400">Entregue este código al Administrador:</p>
-            <p id="auth-code-text" class="text-2xl font-mono font-bold text-amber-400 tracking-widest my-1"></p>
-            <p class="text-[11px] text-slate-400">Caduca automáticamente tras el tiempo asignado o al primer uso.</p>
-          </div>
+          <div id="generated-code-display" class="hidden p-4 rounded-xl bg-slate-900 border border-amber-500/50 text-center"><p id="auth-code-text" class="text-2xl font-mono font-bold text-amber-400 tracking-widest"></p></div>
         </div>
       </section>
 
-      <!-- SECCION 9: GENERADOR DE CODIGOS QR IMPRIMIBLES -->
+      <!-- 11. CODIGOS QR -->
       <section id="sec-dash-qrs" class="view-section hidden grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div class="glass-card p-6 rounded-2xl text-center space-y-4">
-          <h3 class="text-lg font-bold text-amber-400">QR 1: Formulario de Abastecimiento</h3>
-          <p class="text-xs text-slate-400">Escanee para abrir directamente la pantalla de control de combustible</p>
-          <div id="qr-abastecimiento" class="bg-white p-4 rounded-xl inline-block mx-auto"></div>
-          <p id="url-abs-text" class="text-[11px] font-mono text-slate-400 break-all"></p>
-        </div>
-        <div class="glass-card p-6 rounded-2xl text-center space-y-4">
-          <h3 class="text-lg font-bold text-emerald-400">QR 2: Bitácora Operativa (GPS)</h3>
-          <p class="text-xs text-slate-400">Escanee para abrir directamente la bitácora de salida vehicular</p>
-          <div id="qr-bitacora" class="bg-white p-4 rounded-xl inline-block mx-auto"></div>
-          <p id="url-bit-text" class="text-[11px] font-mono text-slate-400 break-all"></p>
-        </div>
+        <div class="glass-card p-6 rounded-2xl text-center space-y-4"><h3 class="text-lg font-bold text-amber-400">QR 1: Abastecimiento</h3><div id="qr-abastecimiento" class="bg-white p-4 rounded-xl inline-block mx-auto"></div><p id="url-abs-text" class="text-[11px] font-mono text-slate-400 break-all"></p></div>
+        <div class="glass-card p-6 rounded-2xl text-center space-y-4"><h3 class="text-lg font-bold text-emerald-400">QR 2: Bitácora (GPS)</h3><div id="qr-bitacora" class="bg-white p-4 rounded-xl inline-block mx-auto"></div><p id="url-bit-text" class="text-[11px] font-mono text-slate-400 break-all"></p></div>
       </section>
-
     </main>
   </div>
 
-  <!-- PIE DE PAGINA FIJO EN ESQUINA INFERIOR DERECHA -->
-  <div class="Watermark-dev">
-    Desarrollador: Ing. J.D. Enriquez N.
+  <!-- MODAL FACTURA PNG -->
+  <div id="invoice-modal" class="hidden fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="glass-card max-w-2xl w-full p-5 rounded-2xl border border-slate-700 space-y-4 text-center">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 id="invoice-modal-title" class="text-sm font-bold text-amber-400 uppercase">Factura de Abastecimiento</h3>
+        <button onclick="closeInvoiceModal()" class="text-slate-400 hover:text-white text-xl">&times;</button>
+      </div>
+      <div class="bg-slate-950 p-2 rounded-xl border border-slate-800 max-h-[70vh] overflow-auto flex items-center justify-center"><img id="invoice-modal-img" src="" class="max-h-[65vh] w-auto object-contain rounded"></div>
+      <div class="flex justify-end gap-3 pt-2">
+        <a id="invoice-download-btn" href="#" download="Factura.png" class="px-4 py-2 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs"><i class="fas fa-download mr-1"></i> Descargar PNG</a>
+        <button onclick="closeInvoiceModal()" class="px-4 py-2 rounded-xl bg-slate-800 text-xs text-slate-200">Cerrar</button>
+      </div>
+    </div>
   </div>
 
+  <div class="Watermark-dev">Desarrollador: Ing. J.D. Enriquez N.</div>
+
   <script>
-    // =========================================================================
-    // CONFIGURACIÓN DE CONEXIÓN AL BACKEND (GOOGLE APPS SCRIPT WEB APP URL)
-    // =========================================================================
     const API_URL = 'https://script.google.com/macros/s/AKfycbz27sSZ4-73_dSrDcuyYN7O_bYSRJrm1v_ZOMKbnXKPpo4KcJu7K7nnM1eLWTYPWI-XBA/exec';
+
+    const DEFAULT_PRICES = [
+      { id_precio: 'DEF-ECO', tipo_combustible: 'ECO', precio_galon: 3.17, fecha_vigencia: '2020-01-01' },
+      { id_precio: 'DEF-SUPER', tipo_combustible: 'SUPER', precio_galon: 5.42, fecha_vigencia: '2020-01-01' },
+      { id_precio: 'DEF-DIESEL', tipo_combustible: 'DIESEL', precio_galon: 3.11, fecha_vigencia: '2020-01-01' }
+    ];
 
     let publicData = { vehiculos: [], distritos: [], grados: [] };
     let currentUser = null;
-    let dashData = { vehiculos: [], personal: [], abastecimientos: [], bitacora: [], usuarios: [], catalogos: [] };
-    let mapInstance = null;
+    let dashData = { vehiculos: [], personal: [], abastecimientos: [], bitacora: [], usuarios: [], catalogos: [], precios_combustible: [] };
+    let mapInstance = null, trendChartInstance = null, activeCameraStream = null;
 
-    // Reloj en tiempo real
-    setInterval(() => {
-      const now = new Date();
-      document.getElementById('clockDisplay').innerText = now.toLocaleString('es-EC');
-    }, 1000);
+    setInterval(() => { document.getElementById('clockDisplay').innerText = formatCleanEcuadorDate(new Date()); }, 1000);
+
+    function formatCleanEcuadorDate(val) {
+      if (!val) return '';
+      const str = String(val).trim();
+      if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(str)) return str;
+      const d = new Date(val);
+      if (isNaN(d.getTime())) return str.replace('T', ' ').substring(0, 19);
+      const parts = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/Guayaquil', year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+      }).formatToParts(d);
+      const m = {}; parts.forEach(p => m[p.type] = p.value);
+      return `${m.year}-${m.month}-${m.day} ${m.hour === '24' ? '00' : m.hour}:${m.minute}:${m.second}`;
+    }
 
     window.addEventListener('DOMContentLoaded', async () => {
-      resetBitacoraCedulas(); // Inicializa 1 casilla de cédula en Formulario 2
+      resetBitacoraCedulas();
       generateQRCodes();
-      
-      const params = new URLSearchParams(window.location.search);
-      const formTarget = params.get('form');
-      if (formTarget === 'bitacora') {
-        showSection('sec-bitacora-form');
-        captureGPS();
-      } else if (formTarget === 'admin') {
-        showSection('sec-login');
-      } else {
-        showSection('sec-abastecimiento');
-      }
-
+      const formTarget = new URLSearchParams(window.location.search).get('form');
+      if (formTarget === 'bitacora') showSection('sec-bitacora-form');
+      else if (formTarget === 'admin') showSection('sec-login');
+      else showSection('sec-abastecimiento');
       await loadPublicData();
-      addPersonalRow(); // Inicializa fila de personal con el catálogo de grados cargado
+      addPersonalRow();
     });
 
-    function toggleSidebar() {
-      const sb = document.getElementById('sidebar');
-      sb.classList.toggle('-translate-x-full');
-    }
+    function toggleSidebar() { document.getElementById('sidebar').classList.toggle('-translate-x-full'); }
 
     function showAlert(msg, isError = false) {
       const box = document.getElementById('alertBox');
-      const text = document.getElementById('alertMessage');
-      box.className = `mb-6 p-4 rounded-xl border text-sm font-medium flex items-center justify-between ${
-        isError ? 'bg-red-950/90 border-red-500 text-red-200' : 'bg-emerald-950/90 border-emerald-500 text-emerald-200'
-      }`;
-      text.innerText = msg;
+      document.getElementById('alertMessage').innerText = msg;
+      box.className = `mb-6 p-4 rounded-xl border text-sm font-medium flex items-center justify-between ${isError ? 'bg-red-950/90 border-red-500 text-red-200' : 'bg-emerald-950/90 border-emerald-500 text-emerald-200'}`;
       box.classList.remove('hidden');
-      setTimeout(() => box.classList.add('hidden'), 7000);
+      setTimeout(() => box.classList.add('hidden'), 7500);
     }
 
     function showSection(id) {
       document.querySelectorAll('.view-section').forEach(s => s.classList.add('hidden'));
       document.getElementById(id).classList.remove('hidden');
+      if (id !== 'sec-abastecimiento') stopLiveCamera();
+      if (id === 'sec-bitacora-form') captureGPS();
       if (id === 'sec-dash-mapa') setTimeout(renderMap, 250);
+      if (id === 'sec-dash-analitica') setTimeout(renderFuelTrendChart, 200);
       if (window.innerWidth < 768) document.getElementById('sidebar').classList.add('-translate-x-full');
     }
 
@@ -643,226 +427,190 @@
         publicData.grados = data.grados || [];
         populateAllDistritoSelectors();
         refreshGradoSelectsInDOM();
-      } catch (e) {
-        console.warn('Error cargando datos iniciales:', e.message);
-      }
+      } catch (e) { console.warn(e.message); }
     }
 
-    // Llena todos los selectores de Distrito (Formularios QR, Vehículos y Usuarios)
     function populateAllDistritoSelectors() {
-      const distritosList = publicData.distritos || [];
-      ['abs-distrito', 'bit-distrito', 'veh-distrito', 'usr-distrito'].forEach(selId => {
-        const sel = document.getElementById(selId);
+      const list = publicData.distritos || [];
+      ['abs-distrito', 'bit-distrito', 'veh-distrito', 'usr-distrito'].forEach(id => {
+        const sel = document.getElementById(id);
         if (!sel) return;
-        const currentVal = sel.value;
-
-        // Si el usuario logueado es ADMIN (no SuperAdmin), restringe los selectores administrativos a su distrito
-        if (currentUser && currentUser.rol !== 'SUPERADMIN' && (selId === 'veh-distrito' || selId === 'usr-distrito')) {
+        const prev = sel.value;
+        if (currentUser && currentUser.rol !== 'SUPERADMIN' && (id === 'veh-distrito' || id === 'usr-distrito')) {
           sel.innerHTML = `<option value="${currentUser.distrito}">${currentUser.distrito}</option>`;
           sel.value = currentUser.distrito;
           return;
         }
-
         sel.innerHTML = '<option value="">Seleccione un distrito...</option>';
-        distritosList.forEach(d => {
-          sel.innerHTML += `<option value="${d}">${d}</option>`;
-        });
-        if (currentVal && distritosList.includes(currentVal)) {
-          sel.value = currentVal;
-        }
+        list.forEach(d => { sel.innerHTML += `<option value="${d}">${d}</option>`; });
+        if (prev && list.includes(prev)) sel.value = prev;
       });
     }
 
-    function filterPlacasByDistrito(distritoSelectId, placaSelectId) {
-      const dist = document.getElementById(distritoSelectId).value;
-      const placaSel = document.getElementById(placaSelectId);
-      placaSel.innerHTML = '<option value="">Seleccione placa...</option>';
-      publicData.vehiculos
-        .filter(v => v.distrito === dist)
-        .forEach(v => {
-          placaSel.innerHTML += `<option value="${v.placa}">${v.placa} - ${v.marca_modelo}</option>`;
-        });
+    function filterPlacasByDistrito(distId, placaId) {
+      const dist = document.getElementById(distId).value;
+      const sel = document.getElementById(placaId);
+      sel.innerHTML = '<option value="">Seleccione placa...</option>';
+      publicData.vehiculos.filter(v => v.distrito === dist).forEach(v => {
+        sel.innerHTML += `<option value="${v.placa}">${v.placa} - ${v.marca_modelo} [${v.tipo_combustible || 'ECO'}]</option>`;
+      });
     }
 
-    // =========================================================================
-    // CAMBIO 2: GESTIÓN DE INPUTS DINÁMICOS DE CÉDULA EN BITÁCORA (+)
-    // =========================================================================
-    function addBitacoraCedulaInput(valor = '') {
-      const container = document.getElementById('bit-cedulas-container');
-      const count = container.querySelectorAll('.bit-cedula-row').length;
+    async function startLiveCamera() {
+      try {
+        stopLiveCamera();
+        activeCameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
+        document.getElementById('live-video').srcObject = activeCameraStream;
+        document.getElementById('camera-stream-box').classList.remove('hidden');
+        document.getElementById('snapshot-preview-box').classList.add('hidden');
+      } catch (err) { showAlert('Permita el acceso a la cámara para tomar la foto de la factura.', true); }
+    }
+
+    function stopLiveCamera() {
+      if (activeCameraStream) { activeCameraStream.getTracks().forEach(t => t.stop()); activeCameraStream = null; }
+      const box = document.getElementById('camera-stream-box');
+      if (box) box.classList.add('hidden');
+    }
+
+    function takeSnapshotPNG() {
+      const v = document.getElementById('live-video'), c = document.getElementById('snapshot-canvas');
+      const scale = v.videoWidth > 800 ? 800 / v.videoWidth : 1;
+      c.width = (v.videoWidth || 640) * scale; c.height = (v.videoHeight || 480) * scale;
+      c.getContext('2d').drawImage(v, 0, 0, c.width, c.height);
+      const png = c.toDataURL('image/png');
+      document.getElementById('abs-factura-base64').value = png;
+      document.getElementById('snapshot-preview-img').src = png;
+      stopLiveCamera();
+      document.getElementById('snapshot-preview-box').classList.remove('hidden');
+    }
+
+    function retakeSnapshot() {
+      document.getElementById('abs-factura-base64').value = '';
+      document.getElementById('snapshot-preview-box').classList.add('hidden');
+      startLiveCamera();
+    }
+
+    function openInvoiceModal(png, placa, fecha) {
+      if (!png) { showAlert('Sin imagen de factura.', true); return; }
+      const cleanF = formatCleanEcuadorDate(fecha);
+      document.getElementById('invoice-modal-title').innerText = `Factura ${placa} (${cleanF})`;
+      document.getElementById('invoice-modal-img').src = png;
+      const dl = document.getElementById('invoice-download-btn');
+      dl.href = png; dl.download = `Factura_${placa}_${cleanF.replace(/[: ]/g, '_')}.png`;
+      document.getElementById('invoice-modal').classList.remove('hidden');
+    }
+
+    function closeInvoiceModal() { document.getElementById('invoice-modal').classList.add('hidden'); }
+
+    function addBitacoraCedulaInput(val = '') {
+      const c = document.getElementById('bit-cedulas-container');
+      const idx = c.querySelectorAll('.bit-cedula-row').length;
       const row = document.createElement('div');
       row.className = 'flex items-center gap-2 bit-cedula-row';
-      row.innerHTML = `
-        <input type="text" required value="${valor}"
-          placeholder="Cédula Ocupante #${count + 1} (Ej: 1712345678)"
-          oninput="this.value = this.value.replace(/[^0-9]/g, '')"
-          maxlength="13"
-          class="bit-cedula-item flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm focus:border-sky-400 focus:outline-none">
-        ${count > 0 ? `
-          <button type="button" onclick="removeBitacoraCedulaInput(this)" class="px-3 py-2.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs transition" title="Quitar cédula">
-            <i class="fas fa-trash"></i>
-          </button>
-        ` : ''}
-      `;
-      container.appendChild(row);
+      row.innerHTML = `<input type="text" required value="${val}" placeholder="Cédula Ocupante #${idx + 1}" oninput="this.value=this.value.replace(/[^0-9]/g,'')" maxlength="13" class="bit-cedula-item flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm">${idx > 0 ? `<button type="button" onclick="removeBitacoraCedulaInput(this)" class="px-3 py-2.5 rounded-lg bg-red-500/20 text-red-400 text-xs"><i class="fas fa-trash"></i></button>` : ''}`;
+      c.appendChild(row);
     }
 
     function removeBitacoraCedulaInput(btn) {
       btn.closest('.bit-cedula-row').remove();
-      // Renumerar los placeholders
-      document.querySelectorAll('#bit-cedulas-container .bit-cedula-item').forEach((inp, idx) => {
-        inp.placeholder = `Cédula Ocupante #${idx + 1} (Ej: 1712345678)`;
-      });
+      document.querySelectorAll('.bit-cedula-item').forEach((inp, i) => inp.placeholder = `Cédula Ocupante #${i + 1}`);
     }
 
     function resetBitacoraCedulas() {
-      const container = document.getElementById('bit-cedulas-container');
-      if (!container) return;
-      container.innerHTML = '';
-      addBitacoraCedulaInput();
+      const c = document.getElementById('bit-cedulas-container');
+      if (c) { c.innerHTML = ''; addBitacoraCedulaInput(); }
     }
 
-    // =========================================================================
-    // ENVÍO DE FORMULARIOS QR (ABASTECIMIENTO Y BITÁCORA)
-    // =========================================================================
+    function captureGPS() {
+      const status = document.getElementById('gps-status'), lock = document.getElementById('gps-strict-lock');
+      if (!navigator.geolocation) { if (lock) lock.classList.remove('hidden'); return; }
+      status.innerText = 'Verificando ubicación GPS...';
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          const lat = pos.coords.latitude.toFixed(6), lng = pos.coords.longitude.toFixed(6);
+          document.getElementById('bit-lat').value = lat; document.getElementById('bit-lng').value = lng;
+          status.innerText = `Ubicación fijada: ${lat}, ${lng}`;
+          status.className = 'text-xs text-emerald-400 font-semibold mt-0.5';
+          if (lock) lock.classList.add('hidden');
+        },
+        () => {
+          document.getElementById('bit-lat').value = ''; document.getElementById('bit-lng').value = '';
+          if (lock) lock.classList.remove('hidden');
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    }
+
     async function handleAbastecimientoSubmit(e) {
       e.preventDefault();
+      const fotoPng = document.getElementById('abs-factura-base64').value;
+      if (!fotoPng) { showAlert('Capture la foto de la factura con la cámara en vivo.', true); return; }
       try {
         const data = {
           distrito: document.getElementById('abs-distrito').value,
           placa: document.getElementById('abs-placa').value,
           cedula: document.getElementById('abs-cedula').value.trim(),
           galones: document.getElementById('abs-galones').value,
-          kilometraje: document.getElementById('abs-km').value
+          kilometraje: document.getElementById('abs-km').value,
+          factura_base64: fotoPng, foto_factura: fotoPng
         };
         const resp = await apiCall('SUBMIT_ABASTECIMIENTO', { data });
-        showAlert(`${resp.message} Conductor verificado: ${resp.conductor} (${resp.timestamp})`);
+        showAlert(`${resp.message} Conductor: ${resp.conductor}`);
         e.target.reset();
-      } catch (err) {
-        showAlert(err.message, true);
-      }
-    }
-
-    function captureGPS() {
-      const status = document.getElementById('gps-status');
-      if (!navigator.geolocation) {
-        status.innerText = 'Geolocalización no soportada en este navegador.';
-        return;
-      }
-      status.innerText = 'Solicitando permiso de ubicación GPS...';
-      navigator.geolocation.getCurrentPosition(
-        pos => {
-          const lat = pos.coords.latitude.toFixed(6);
-          const lng = pos.coords.longitude.toFixed(6);
-          document.getElementById('bit-lat').value = lat;
-          document.getElementById('bit-lng').value = lng;
-          status.innerText = `Ubicación fijada: ${lat}, ${lng}`;
-          status.className = 'text-xs text-emerald-400 font-semibold mt-0.5';
-        },
-        err => {
-          status.innerText = 'Error: Debe permitir el acceso a la ubicación para registrar la bitácora.';
-          status.className = 'text-xs text-red-400 font-semibold mt-0.5';
-        },
-        { enableHighAccuracy: true, timeout: 10000 }
-      );
+        document.getElementById('abs-factura-base64').value = '';
+        document.getElementById('snapshot-preview-box').classList.add('hidden');
+      } catch (err) { showAlert(err.message, true); }
     }
 
     async function handleBitacoraSubmit(e) {
       e.preventDefault();
-      const lat = document.getElementById('bit-lat').value;
-      const lng = document.getElementById('bit-lng').value;
-      if (!lat || !lng) {
-        showAlert('Es obligatorio obtener las coordenadas GPS antes de registrar la salida.', true);
-        captureGPS();
-        return;
-      }
-
-      const cedulasArray = Array.from(document.querySelectorAll('.bit-cedula-item'))
-        .map(inp => inp.value.trim())
-        .filter(Boolean);
-
-      if (cedulasArray.length === 0) {
-        showAlert('Debe ingresar al menos una cédula.', true);
-        return;
-      }
-
+      const lat = document.getElementById('bit-lat').value, lng = document.getElementById('bit-lng').value;
+      if (!lat || !lng) { document.getElementById('gps-strict-lock').classList.remove('hidden'); captureGPS(); return; }
+      const cedulas = Array.from(document.querySelectorAll('.bit-cedula-item')).map(i => i.value.trim()).filter(Boolean);
+      const cartilla = document.getElementById('bit-cartilla-ecu').value.trim().toUpperCase();
       try {
         const data = {
           distrito: document.getElementById('bit-distrito').value,
           placa: document.getElementById('bit-placa').value,
-          cedulas: cedulasArray,
+          cedulas, cartilla_ecu: cartilla, numero_cartilla_ecu: cartilla,
           actividad: document.getElementById('bit-actividad').value,
-          kilometraje: document.getElementById('bit-km').value,
-          latitud: lat,
-          longitud: lng
+          kilometraje: document.getElementById('bit-km').value, latitud: lat, longitud: lng
         };
         const resp = await apiCall('SUBMIT_BITACORA', { data });
-        showAlert(`${resp.message} Personal: ${resp.ocupantes.join(', ')}`);
-        e.target.reset();
-        resetBitacoraCedulas();
-        document.getElementById('gps-status').innerText = 'Pendiente de captura...';
-      } catch (err) {
-        showAlert(err.message, true);
-      }
+        showAlert(`${resp.message} (${resp.ocupantes.join(', ')})`);
+        e.target.reset(); resetBitacoraCedulas(); captureGPS();
+      } catch (err) { showAlert(err.message, true); }
     }
 
-    // =========================================================================
-    // AUTENTICACIÓN Y PANEL ADMINISTRATIVO
-    // =========================================================================
     async function handleLogin(e) {
       e.preventDefault();
       try {
-        const email = document.getElementById('login-email').value;
-        const password = document.getElementById('login-pass').value;
-        const user = await apiCall('LOGIN', { email, password });
-        currentUser = user;
-
-        if (user.cambio_clave === 'SI') {
-          document.getElementById('box-change-pass').classList.remove('hidden');
-          showAlert('Primer ingreso detectado. Por favor actualice su clave temporal.');
-          return;
-        }
+        currentUser = await apiCall('LOGIN', { email: document.getElementById('login-email').value, password: document.getElementById('login-pass').value });
+        if (currentUser.cambio_clave === 'SI') { document.getElementById('box-change-pass').classList.remove('hidden'); return; }
         enterDashboard();
-      } catch (err) {
-        showAlert(err.message, true);
-      }
+      } catch (err) { showAlert(err.message, true); }
     }
 
     async function submitNewPassword() {
       const newPassword = document.getElementById('new-personal-pass').value;
-      if (!newPassword || newPassword.length < 5) {
-        showAlert('Ingrese una contraseña válida de al menos 5 caracteres.', true);
-        return;
-      }
+      if (!newPassword || newPassword.length < 5) { showAlert('Mínimo 5 caracteres.', true); return; }
       try {
         await apiCall('CHANGE_PASSWORD', { email: currentUser.email, newPassword });
         document.getElementById('box-change-pass').classList.add('hidden');
-        showAlert('Clave actualizada con éxito.');
         enterDashboard();
-      } catch (err) {
-        showAlert(err.message, true);
-      }
+      } catch (err) { showAlert(err.message, true); }
     }
 
     async function enterDashboard() {
       document.getElementById('admin-protected-links').classList.remove('hidden');
       document.getElementById('menu-login-btn').classList.add('hidden');
       document.getElementById('btnLogout').classList.remove('hidden');
-      
-      const badge = document.getElementById('activeUserBadge');
-      badge.innerText = `${currentUser.nombre} | ${currentUser.rol} (${currentUser.distrito})`;
-      badge.classList.remove('hidden');
-
-      if (currentUser.rol !== 'SUPERADMIN') {
-        document.getElementById('superadmin-auth-box').classList.add('hidden');
-        document.getElementById('opt-superadmin').classList.add('hidden');
-        document.getElementById('menu-catalogos-btn').classList.add('hidden');
-      } else {
-        document.getElementById('superadmin-auth-box').classList.remove('hidden');
-        document.getElementById('opt-superadmin').classList.remove('hidden');
-        document.getElementById('menu-catalogos-btn').classList.remove('hidden');
-      }
-
+      const b = document.getElementById('activeUserBadge');
+      b.innerText = `${currentUser.nombre} | ${currentUser.rol} (${currentUser.distrito})`; b.classList.remove('hidden');
+      const isSuper = currentUser.rol === 'SUPERADMIN';
+      document.getElementById('superadmin-auth-box').classList.toggle('hidden', !isSuper);
+      document.getElementById('opt-superadmin').classList.toggle('hidden', !isSuper);
+      document.getElementById('menu-catalogos-btn').classList.toggle('hidden', !isSuper);
       await refreshDashboardData();
       populateAllDistritoSelectors();
       showSection('sec-dash-bitacora');
@@ -874,446 +622,301 @@
       document.getElementById('menu-login-btn').classList.remove('hidden');
       document.getElementById('btnLogout').classList.add('hidden');
       document.getElementById('activeUserBadge').classList.add('hidden');
-      populateAllDistritoSelectors();
       showSection('sec-login');
+    }
+
+    function getApplicableFuelPrice(tipo, fechaStr) {
+      const t = String(tipo || 'ECO').toUpperCase(), f = formatCleanEcuadorDate(fechaStr).substring(0, 10) || '2026-01-01';
+      const prices = (dashData.precios_combustible && dashData.precios_combustible.length) ? [...DEFAULT_PRICES, ...dashData.precios_combustible] : DEFAULT_PRICES;
+      const m = prices.filter(p => String(p.tipo_combustible).toUpperCase() === t && String(p.fecha_vigencia).substring(0, 10) <= f)
+                      .sort((a, b) => String(b.fecha_vigencia).localeCompare(String(a.fecha_vigencia)));
+      return m.length ? Number(m[0].precio_galon) : (t === 'SUPER' ? 5.42 : t === 'DIESEL' ? 3.11 : 3.17);
+    }
+
+    function recalculateAllFuelRecordsClient() {
+      const vehMap = {}; (dashData.vehiculos || []).forEach(v => vehMap[String(v.placa).toUpperCase()] = v.tipo_combustible || 'ECO');
+      const byPlaca = {}, dayCount = {}, anomalies = [];
+      const sorted = [...(dashData.abastecimientos || [])].sort((a, b) => formatCleanEcuadorDate(a.fecha_hora).localeCompare(formatCleanEcuadorDate(b.fecha_hora)));
+
+      sorted.forEach(r => {
+        r.fecha_hora = formatCleanEcuadorDate(r.fecha_hora);
+        const p = String(r.placa).toUpperCase(), day = r.fecha_hora.substring(0, 10);
+        dayCount[`${p}_${day}`] = (dayCount[`${p}_${day}`] || 0) + 1;
+        r.tipo_combustible = r.tipo_combustible || vehMap[p] || 'ECO';
+        r.precio_galon = Number(r.precio_galon || getApplicableFuelPrice(r.tipo_combustible, r.fecha_hora)).toFixed(2);
+        r.total_usd = Number(r.total_usd || (Number(r.galones) * Number(r.precio_galon))).toFixed(2);
+        if (!byPlaca[p]) byPlaca[p] = [];
+        const prev = byPlaca[p];
+        r.recorrido_km = prev.length === 0 ? 0 : (Number(r.kilometraje) - Number(prev[prev.length - 1].kilometraje));
+        byPlaca[p].push(r);
+      });
+
+      Object.keys(byPlaca).forEach(p => {
+        const list = byPlaca[p], valid = list.filter(x => x.recorrido_km > 0);
+        const avg = valid.length ? valid.reduce((s, x) => s + x.recorrido_km, 0) / valid.length : 0;
+        list.forEach(r => {
+          const day = r.fecha_hora.substring(0, 10), flags = [];
+          if (dayCount[`${p}_${day}`] >= 2) flags.push(`2+ tanqueos el mismo día (${day})`);
+          if (avg > 0 && r.recorrido_km > 0 && (Math.abs(r.recorrido_km - avg) / avg) >= 0.35) {
+            flags.push(`Desviación de recorrido (${r.recorrido_km} km vs prom. ${avg.toFixed(0)} km)`);
+          }
+          r._anomalyFlags = flags;
+          if (flags.length) anomalies.push(`<b>${p} (${r.fecha_hora}):</b> ${flags.join(' | ')}`);
+        });
+      });
+
+      dashData.abastecimientos = sorted;
+      const banner = document.getElementById('anomalies-banner');
+      if (anomalies.length) { banner.classList.remove('hidden'); document.getElementById('anomalies-list').innerHTML = anomalies.reverse().map(a => `<div>• ${a}</div>`).join(''); }
+      else banner.classList.add('hidden');
     }
 
     async function refreshDashboardData() {
       dashData = await apiCall('GET_DASHBOARD_DATA', { user: currentUser });
-      
-      // Sincronizar catálogos con selectores globales
       if (dashData.catalogos) {
-        const distCat = dashData.catalogos.filter(c => c.tipo === 'DISTRITO').map(c => c.valor);
-        const gradCat = dashData.catalogos.filter(c => c.tipo === 'GRADO').map(c => c.valor);
-        publicData.distritos = [...new Set([...distCat, ...dashData.vehiculos.map(v => v.distrito).filter(Boolean)])];
-        publicData.grados = gradCat;
-        populateAllDistritoSelectors();
-        refreshGradoSelectsInDOM();
-        renderCatalogosLists();
+        publicData.distritos = [...new Set([...dashData.catalogos.filter(c => c.tipo === 'DISTRITO').map(c => c.valor), ...dashData.vehiculos.map(v => v.distrito).filter(Boolean)])];
+        publicData.grados = dashData.catalogos.filter(c => c.tipo === 'GRADO').map(c => c.valor);
+        populateAllDistritoSelectors(); refreshGradoSelectsInDOM(); renderCatalogosLists();
       }
-
+      recalculateAllFuelRecordsClient();
+      populateAnalyticsSelectors();
       renderBitacoraTimeline();
       renderAbastecimientosTable();
       renderVehiculosList();
+      renderFuelPricesList();
+      renderFuelTrendChart();
     }
 
-    // =========================================================================
-    // CAMBIO 1: FUNCIONES DE ADMINISTRACIÓN DE CATÁLOGOS (DISTRITOS Y GRADOS)
-    // =========================================================================
     function renderCatalogosLists() {
-      const distContainer = document.getElementById('list-cat-distrito');
-      const gradoContainer = document.getElementById('list-cat-grado');
-      if (!distContainer || !gradoContainer) return;
-
-      const distritos = (dashData.catalogos || []).filter(c => c.tipo === 'DISTRITO');
-      const grados = (dashData.catalogos || []).filter(c => c.tipo === 'GRADO');
-
-      distContainer.innerHTML = distritos.length === 0
-        ? '<p class="text-xs text-slate-400">No hay distritos en el catálogo.</p>'
-        : distritos.map(d => `
-          <div class="flex items-center justify-between px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 text-xs">
-            <span class="font-semibold text-slate-200">${d.valor}</span>
-            <button onclick="handleDeleteCatalogo('${d.id_item}')" class="text-red-400 hover:text-red-300">
-              <i class="fas fa-trash"></i>
-            </button>
-          </div>
-        `).join('');
-
-      gradoContainer.innerHTML = grados.length === 0
-        ? '<p class="text-xs text-slate-400">No hay grados/designaciones en el catálogo.</p>'
-        : grados.map(g => `
-          <div class="flex items-center justify-between px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 text-xs">
-            <span class="font-semibold text-slate-200">${g.valor}</span>
-            <button onclick="handleDeleteCatalogo('${g.id_item}')" class="text-red-400 hover:text-red-300">
-              <i class="fas fa-trash"></i>
-            </button>
-          </div>
-        `).join('');
+      const d = (dashData.catalogos || []).filter(c => c.tipo === 'DISTRITO'), g = (dashData.catalogos || []).filter(c => c.tipo === 'GRADO');
+      document.getElementById('list-cat-distrito').innerHTML = d.map(x => `<div class="flex justify-between px-3 py-2 rounded bg-slate-900 border border-slate-800 text-xs"><span>${x.valor}</span><button onclick="handleDeleteCatalogo('${x.id_item}')" class="text-red-400"><i class="fas fa-trash"></i></button></div>`).join('');
+      document.getElementById('list-cat-grado').innerHTML = g.map(x => `<div class="flex justify-between px-3 py-2 rounded bg-slate-900 border border-slate-800 text-xs"><span>${x.valor}</span><button onclick="handleDeleteCatalogo('${x.id_item}')" class="text-red-400"><i class="fas fa-trash"></i></button></div>`).join('');
     }
 
-    async function handleAddCatalogo(e, tipo, inputId) {
+    function renderFuelPricesList() {
+      const list = (dashData.precios_combustible && dashData.precios_combustible.length) ? dashData.precios_combustible : DEFAULT_PRICES;
+      document.getElementById('list-fuel-prices').innerHTML = [...list].reverse().map(p => `<div class="flex justify-between px-3 py-2 rounded bg-slate-900 border border-slate-800 text-xs"><span><b>${p.tipo_combustible}:</b> $${Number(p.precio_galon).toFixed(2)}</span><span class="font-mono text-slate-400">${String(p.fecha_vigencia).substring(0, 10)}</span></div>`).join('');
+    }
+
+    async function handleAddFuelPrice(e) {
       e.preventDefault();
-      const inp = document.getElementById(inputId);
-      const valor = inp.value.trim();
-      if (!valor) return;
       try {
-        const resp = await apiCall('ADD_CATALOGO', { user: currentUser, tipo, valor });
-        showAlert(resp.message);
-        inp.value = '';
-        await refreshDashboardData();
-      } catch (err) {
-        showAlert(err.message, true);
-      }
+        const resp = await apiCall('ADD_FUEL_PRICE', { user: currentUser, tipo_combustible: document.getElementById('price-tipo').value, precio_galon: document.getElementById('price-valor').value, fecha_vigencia: document.getElementById('price-fecha').value });
+        showAlert(resp.message || 'Precio actualizado y recalculado.'); e.target.reset(); await refreshDashboardData();
+      } catch (err) { showAlert(err.message, true); }
+    }
+
+    async function handleAddCatalogo(e, tipo, id) {
+      e.preventDefault();
+      const inp = document.getElementById(id);
+      try { const resp = await apiCall('ADD_CATALOGO', { user: currentUser, tipo, valor: inp.value.trim() }); showAlert(resp.message); inp.value = ''; await refreshDashboardData(); }
+      catch (err) { showAlert(err.message, true); }
     }
 
     async function handleDeleteCatalogo(id_item) {
-      if (!confirm('¿Eliminar esta opción del catálogo?')) return;
-      try {
-        const resp = await apiCall('DELETE_CATALOGO', { user: currentUser, id_item });
-        showAlert(resp.message);
-        await refreshDashboardData();
-      } catch (err) {
-        showAlert(err.message, true);
-      }
+      if (!confirm('¿Eliminar opción del catálogo?')) return;
+      try { await apiCall('DELETE_CATALOGO', { user: currentUser, id_item }); await refreshDashboardData(); }
+      catch (err) { showAlert(err.message, true); }
     }
 
-    function getGradoOptionsHTML(selectedVal = '') {
-      const list = publicData.grados || [];
-      let html = '<option value="">Grado / Designación...</option>';
-      list.forEach(g => {
-        const sel = g === selectedVal ? 'selected' : '';
-        html += `<option value="${g}" ${sel}>${g}</option>`;
-      });
-      if (selectedVal && !list.includes(selectedVal)) {
-        html += `<option value="${selectedVal}" selected>${selectedVal}</option>`;
-      }
-      return html;
+    function getGradoOptionsHTML(selVal = '') {
+      let h = '<option value="">Grado/Designación...</option>';
+      (publicData.grados || []).forEach(g => h += `<option value="${g}" ${g === selVal ? 'selected' : ''}>${g}</option>`);
+      return h;
     }
 
-    function refreshGradoSelectsInDOM() {
-      document.querySelectorAll('.p-grado').forEach(sel => {
-        const current = sel.value;
-        sel.innerHTML = getGradoOptionsHTML(current);
-      });
-    }
+    function refreshGradoSelectsInDOM() { document.querySelectorAll('.p-grado').forEach(s => s.innerHTML = getGradoOptionsHTML(s.value)); }
 
-    // =========================================================================
-    // BITÁCORA EN LÍNEA DE TIEMPO Y TABLA DE ABASTECIMIENTOS
-    // =========================================================================
-    function filterByPlacaAndDate(list, placaInputId, fromId, toId) {
-      const qPlaca = document.getElementById(placaInputId).value.trim().toUpperCase();
-      const fromVal = document.getElementById(fromId).value;
-      const toVal = document.getElementById(toId).value;
-
-      return list.filter(item => {
-        const matchPlaca = !qPlaca || String(item.placa).toUpperCase().includes(qPlaca);
-        const itemDate = String(item.fecha_hora).substring(0, 10);
-        const matchFrom = !fromVal || itemDate >= fromVal;
-        const matchTo = !toVal || itemDate <= toVal;
-        return matchPlaca && matchFrom && matchTo;
+    function filterByPlacaAndDate(list, pId, fId, tId) {
+      const q = document.getElementById(pId).value.trim().toUpperCase(), f = document.getElementById(fId).value, t = document.getElementById(tId).value;
+      return list.filter(i => {
+        const d = formatCleanEcuadorDate(i.fecha_hora).substring(0, 10);
+        return (!q || String(i.placa).toUpperCase().includes(q)) && (!f || d >= f) && (!t || d <= t);
       });
     }
 
     function renderBitacoraTimeline() {
-      const container = document.getElementById('timeline-container');
-      const filtered = filterByPlacaAndDate(dashData.bitacora, 'filter-bit-placa', 'filter-bit-from', 'filter-bit-to').reverse();
-
-      if (filtered.length === 0) {
-        container.innerHTML = '<p class="text-xs text-slate-400">No existen registros de bitácora para los filtros seleccionados.</p>';
-        return;
-      }
-
-      container.innerHTML = filtered.map(b => `
-        <div class="relative glass-card p-4 rounded-xl border border-slate-700/80">
-          <div class="absolute -left-8 top-5 w-4 h-4 rounded-full bg-sky-400 border-4 border-slate-900"></div>
-          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2 mb-2">
-            <div class="flex items-center gap-2">
-              <span class="px-2.5 py-0.5 rounded-md bg-sky-500/20 text-sky-300 font-bold text-xs">${b.placa}</span>
-              <span class="text-xs text-slate-400 font-semibold">${b.distrito}</span>
-            </div>
-            <span class="text-xs font-mono text-slate-300"><i class="far fa-clock mr-1 text-sky-400"></i>${b.fecha_hora}</span>
-          </div>
-          <p class="text-sm font-medium text-white mb-2">${b.actividad}</p>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs text-slate-300 bg-slate-900/60 p-2.5 rounded-lg">
-            <div><b>Personal:</b> ${b.nombres_ocupantes}</div>
-            <div><b>Kilometraje Salida:</b> ${b.kilometraje} km</div>
-            <div><b>Coordenadas:</b> ${b.latitud}, ${b.longitud}</div>
-          </div>
-          <div class="mt-3 flex justify-end gap-2">
-            <button onclick="requestRecordAction('BITACORA', '${b.id_bitacora}', 'EDIT', '${b.actividad}', '${b.kilometraje}')" class="px-2.5 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs">
-              <i class="fas fa-edit mr-1"></i> Editar
-            </button>
-            <button onclick="requestRecordAction('BITACORA', '${b.id_bitacora}', 'DELETE')" class="px-2.5 py-1 rounded bg-red-500/20 hover:bg-red-500/30 text-red-300 text-xs">
-              <i class="fas fa-trash mr-1"></i> Eliminar
-            </button>
-          </div>
-        </div>
-      `).join('');
+      const list = filterByPlacaAndDate(dashData.bitacora, 'filter-bit-placa', 'filter-bit-from', 'filter-bit-to').reverse();
+      document.getElementById('timeline-container').innerHTML = list.map(b => {
+        const cleanF = formatCleanEcuadorDate(b.fecha_hora), cart = b.cartilla_ecu || b.numero_cartilla_ecu || 'S/N';
+        return `<div class="relative glass-card p-4 rounded-xl border border-slate-700/80"><div class="absolute -left-8 top-5 w-4 h-4 rounded-full bg-sky-400 border-4 border-slate-900"></div><div class="flex justify-between items-center border-b border-slate-800 pb-2 mb-2 text-xs"><div><span class="px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 font-bold">${b.placa}</span> <span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-semibold ml-1">ECU: ${cart}</span> <span class="text-slate-400 ml-1">${b.distrito}</span></div><span class="font-mono text-slate-300">${cleanF}</span></div><p class="text-sm font-medium mb-2">${b.actividad}</p><div class="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs text-slate-300 bg-slate-900/60 p-2.5 rounded-lg"><div><b>Personal:</b> ${b.nombres_ocupantes}</div><div><b>Km Salida:</b> ${b.kilometraje} km</div><div><b>GPS:</b> ${b.latitud}, ${b.longitud}</div></div><div class="mt-3 flex justify-end gap-2 text-xs"><button onclick="requestRecordAction('BITACORA','${b.id_bitacora}','EDIT','${b.actividad}','${b.kilometraje}','${cart}')" class="px-2.5 py-1 rounded bg-amber-500/20 text-amber-300">Editar</button><button onclick="requestRecordAction('BITACORA','${b.id_bitacora}','DELETE')" class="px-2.5 py-1 rounded bg-red-500/20 text-red-300">Eliminar</button></div></div>`;
+      }).join('') || '<p class="text-xs text-slate-400">Sin registros.</p>';
     }
 
     function renderAbastecimientosTable() {
-      const tbody = document.getElementById('table-abastecimientos');
-      const filtered = filterByPlacaAndDate(dashData.abastecimientos, 'filter-abs-placa', 'filter-abs-from', 'filter-abs-to').reverse();
-
-      if (filtered.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-slate-400">Sin registros.</td></tr>';
-        return;
-      }
-
-      tbody.innerHTML = filtered.map(a => `
-        <tr class="hover:bg-slate-800/40">
-          <td class="p-3 font-mono">${a.fecha_hora}</td>
-          <td class="p-3">${a.distrito}</td>
-          <td class="p-3"><span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold">${a.placa}</span></td>
-          <td class="p-3">${a.nombre_conductor} <span class="text-slate-400">(${a.cedula_conductor})</span></td>
-          <td class="p-3 font-bold text-amber-400">${a.galones} gal</td>
-          <td class="p-3 font-mono">${a.kilometraje} km</td>
-          <td class="p-3 text-right space-x-1">
-            <button onclick="requestRecordAction('ABASTECIMIENTO', '${a.id_registro}', 'EDIT', '${a.galones}', '${a.kilometraje}')" class="px-2 py-1 rounded bg-amber-500/20 text-amber-300 hover:bg-amber-500/30">
-              <i class="fas fa-edit"></i>
-            </button>
-            <button onclick="requestRecordAction('ABASTECIMIENTO', '${a.id_registro}', 'DELETE')" class="px-2 py-1 rounded bg-red-500/20 text-red-300 hover:bg-red-500/30">
-              <i class="fas fa-trash"></i>
-            </button>
-          </td>
-        </tr>
-      `).join('');
+      const list = filterByPlacaAndDate(dashData.abastecimientos, 'filter-abs-placa', 'filter-abs-from', 'filter-abs-to').reverse();
+      document.getElementById('table-abastecimientos').innerHTML = list.map(a => {
+        const cleanF = formatCleanEcuadorDate(a.fecha_hora), foto = a.factura_base64 || a.foto_factura || '', alert = a._anomalyFlags && a._anomalyFlags.length;
+        return `<tr class="${alert ? 'bg-red-950/30 border-l-4 border-red-500' : 'hover:bg-slate-800/40'}"><td class="p-3 font-mono">${cleanF}</td><td class="p-3">${a.distrito}</td><td class="p-3"><b class="text-amber-300">${a.placa}</b><span class="block text-[10px] text-slate-400">${a.tipo_combustible || 'ECO'}</span></td><td class="p-3">${a.nombre_conductor}</td><td class="p-3 font-bold text-amber-400">${Number(a.galones).toFixed(2)}</td><td class="p-3 font-mono">$${Number(a.precio_galon).toFixed(2)}</td><td class="p-3 font-bold text-emerald-400">$${Number(a.total_usd).toFixed(2)}</td><td class="p-3 font-mono">${a.kilometraje} km</td><td class="p-3 font-mono">${a.recorrido_km > 0 ? a.recorrido_km + ' km' : 'Inicial'}</td><td class="p-3">${foto ? `<button onclick="openInvoiceByIndex('${a.id_registro}')" class="px-2 py-1 rounded bg-sky-500/20 text-sky-300 text-xs">Ver Factura</button>` : '-'}</td><td class="p-3 text-right space-x-1"><button onclick="requestRecordAction('ABASTECIMIENTO','${a.id_registro}','EDIT','${a.galones}','${a.kilometraje}')" class="px-2 py-1 rounded bg-amber-500/20 text-amber-300"><i class="fas fa-edit"></i></button><button onclick="requestRecordAction('ABASTECIMIENTO','${a.id_registro}','DELETE')" class="px-2 py-1 rounded bg-red-500/20 text-red-300"><i class="fas fa-trash"></i></button></td></tr>`;
+      }).join('') || '<tr><td colspan="11" class="p-4 text-center text-slate-400">Sin registros.</td></tr>';
     }
 
-    // =========================================================================
-    // EDICIÓN Y ELIMINACIÓN CON CÓDIGO DE AUTORIZACIÓN DEL SUPERADMIN
-    // =========================================================================
-    async function requestRecordAction(tipoTabla, idRegistro, operation, val1 = '', val2 = '') {
-      let authCode = '';
-      if (currentUser.rol !== 'SUPERADMIN') {
-        authCode = prompt('ACCIÓN RESTRINGIDA: Ingrese el código de autorización temporal proporcionado por el SuperAdmin:');
-        if (!authCode) return;
-      } else {
-        if (!confirm(`¿Está seguro de ${operation === 'DELETE' ? 'ELIMINAR' : 'MODIFICAR'} este registro como SuperAdmin?`)) return;
-      }
+    function openInvoiceByIndex(idReg) {
+      const r = dashData.abastecimientos.find(x => x.id_registro === idReg);
+      if (r) openInvoiceModal(r.factura_base64 || r.foto_factura, r.placa, r.fecha_hora);
+    }
 
+    async function requestRecordAction(tipoTabla, idRegistro, operation, v1 = '', v2 = '', v3 = '') {
+      let authCode = '';
+      if (currentUser.rol !== 'SUPERADMIN') { authCode = prompt('Ingrese código de autorización del SuperAdmin:'); if (!authCode) return; }
+      else if (!confirm(`¿Confirma ${operation} este registro?`)) return;
       let updatedFields = {};
       if (operation === 'EDIT') {
         if (tipoTabla === 'ABASTECIMIENTO') {
-          const galones = prompt('Editar cantidad de Galones:', val1);
-          const kilometraje = prompt('Editar Kilometraje:', val2);
+          const galones = prompt('Galones:', v1), kilometraje = prompt('Kilometraje:', v2);
           if (galones === null || kilometraje === null) return;
           updatedFields = { galones, kilometraje };
         } else {
-          const actividad = prompt('Editar Actividad Operativa:', val1);
-          const kilometraje = prompt('Editar Kilometraje de Salida:', val2);
+          const actividad = prompt('Actividad:', v1), kilometraje = prompt('Kilometraje:', v2), cartilla_ecu = prompt('Cartilla ECU:', v3);
           if (actividad === null || kilometraje === null) return;
-          updatedFields = { actividad, kilometraje };
+          updatedFields = { actividad, kilometraje, cartilla_ecu };
         }
       }
-
       try {
-        const resp = await apiCall('MODIFY_RECORD', {
-          user: currentUser,
-          authCode,
-          tipoTabla,
-          idRegistro,
-          operation,
-          updatedFields
-        });
-        showAlert(resp.message);
-        await refreshDashboardData();
-      } catch (err) {
-        showAlert(err.message, true);
-      }
+        const resp = await apiCall('MODIFY_RECORD', { user: currentUser, authCode, tipoTabla, idRegistro, operation, updatedFields });
+        showAlert(resp.message); await refreshDashboardData();
+      } catch (err) { showAlert(err.message, true); }
     }
 
     async function handleGenerateAuthCode() {
       try {
-        const minutos = document.getElementById('auth-minutos').value;
-        const resp = await apiCall('GENERATE_AUTH_CODE', {
-          superAdminEmail: currentUser.email,
-          minutos
-        });
+        const resp = await apiCall('GENERATE_AUTH_CODE', { superAdminEmail: currentUser.email, minutos: document.getElementById('auth-minutos').value });
         document.getElementById('generated-code-display').classList.remove('hidden');
         document.getElementById('auth-code-text').innerText = resp.code;
-      } catch (err) {
-        showAlert(err.message, true);
-      }
+      } catch (err) { showAlert(err.message, true); }
     }
 
-    // =========================================================================
-    // MAPA GEORREFERENCIADO DE BITÁCORA
-    // =========================================================================
+    function populateAnalyticsSelectors() {
+      const c = document.getElementById('chart-placa-filter'), p = document.getElementById('pdf-placa-select');
+      c.innerHTML = '<option value="">Todos los Vehículos</option>'; p.innerHTML = '<option value="">Seleccione placa...</option>';
+      (dashData.vehiculos || []).forEach(v => {
+        c.innerHTML += `<option value="${v.placa}">${v.placa}</option>`;
+        p.innerHTML += `<option value="${v.placa}">${v.placa} - ${v.marca_modelo}</option>`;
+      });
+    }
+
+    function getISOWeekString(dateStr) {
+      const d = new Date(dateStr + 'T12:00:00'); if (isNaN(d.getTime())) return dateStr;
+      const t = new Date(d.valueOf()); t.setDate(t.getDate() - ((d.getDay() + 6) % 7) + 3);
+      const firstThu = t.valueOf(); t.setMonth(0, 1);
+      if (t.getDay() !== 4) t.setMonth(0, 1 + ((4 - t.getDay()) + 7) % 7);
+      return `${d.getFullYear()}-Sem-${String(1 + Math.ceil((firstThu - t) / 604800000)).padStart(2, '0')}`;
+    }
+
+    function renderFuelTrendChart() {
+      const canvas = document.getElementById('fuelTrendChartCanvas'); if (!canvas) return;
+      const group = document.getElementById('chart-group-by').value, placa = document.getElementById('chart-placa-filter').value;
+      const totals = {};
+      (dashData.abastecimientos || []).filter(r => !placa || String(r.placa).toUpperCase() === placa.toUpperCase()).forEach(r => {
+        const d = formatCleanEcuadorDate(r.fecha_hora).substring(0, 10);
+        const k = group === 'WEEK' ? getISOWeekString(d) : group === 'MONTH' ? d.substring(0, 7) : d;
+        totals[k] = (totals[k] || 0) + Number(r.total_usd || 0);
+      });
+      const labels = Object.keys(totals).sort(), data = labels.map(k => Number(totals[k].toFixed(2)));
+      if (trendChartInstance) trendChartInstance.destroy();
+      trendChartInstance = new Chart(canvas, {
+        type: 'line',
+        data: { labels, datasets: [{ label: 'Gasto Combustible (USD)', data, borderColor: '#fb7185', backgroundColor: 'rgba(251,113,133,0.2)', fill: true, tension: 0.3 }] },
+        options: { responsive: true, maintainAspectRatio: false }
+      });
+    }
+
+    function generateVehiclePDFReport() {
+      const placa = document.getElementById('pdf-placa-select').value;
+      if (!placa) { showAlert('Seleccione una placa.', true); return; }
+      const from = document.getElementById('pdf-from').value, to = document.getElementById('pdf-to').value;
+      const veh = (dashData.vehiculos || []).find(v => String(v.placa).toUpperCase() === placa.toUpperCase()) || { placa, distrito: '-', marca_modelo: '-', tipo_combustible: 'ECO' };
+      const abs = (dashData.abastecimientos || []).filter(a => String(a.placa).toUpperCase() === placa.toUpperCase() && (!from || a.fecha_hora.substring(0,10) >= from) && (!to || a.fecha_hora.substring(0,10) <= to));
+      const bit = (dashData.bitacora || []).filter(b => String(b.placa).toUpperCase() === placa.toUpperCase() && (!from || formatCleanEcuadorDate(b.fecha_hora).substring(0,10) >= from) && (!to || formatCleanEcuadorDate(b.fecha_hora).substring(0,10) <= to));
+      const { jsPDF } = window.jspdf; const doc = new jsPDF();
+      doc.setFontSize(12); doc.text(`INFORME OFICIAL VEHICULO PLACA: ${veh.placa} (${veh.distrito})`, 14, 16);
+      doc.setFontSize(9); doc.text(`Combustible: ${veh.tipo_combustible || 'ECO'} | Modelo: ${veh.marca_modelo} | Emitido: ${formatCleanEcuadorDate(new Date())}`, 14, 23);
+      doc.autoTable({ startY: 28, head: [['Fecha/Hora', 'Conductor', 'Galones', 'Precio', 'Total USD', 'Km', 'Recorrido']], body: abs.map(a => [a.fecha_hora, a.nombre_conductor, a.galones, '$'+a.precio_galon, '$'+a.total_usd, a.kilometraje, a.recorrido_km+' km']), styles: { fontSize: 7.5 } });
+      doc.autoTable({ startY: doc.lastAutoTable.finalY + 8, head: [['Fecha/Hora', 'Cartilla ECU', 'Personal', 'Actividad', 'Km Salida']], body: bit.map(b => [formatCleanEcuadorDate(b.fecha_hora), b.cartilla_ecu || b.numero_cartilla_ecu || 'S/N', b.nombres_ocupantes, b.actividad, b.kilometraje]), styles: { fontSize: 7.5 } });
+      doc.save(`Informe_${veh.placa}.pdf`);
+    }
+
+    function downloadCSVFile(name, rows) {
+      const csv = '\uFEFF' + rows.map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(';')).join('\n');
+      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' })); a.download = name; a.click();
+    }
+
+    function exportAbastecimientosCSV() {
+      const h = ['ID', 'Fecha_Hora_GMT5', 'Distrito', 'Placa', 'Combustible', 'Cedula', 'Conductor', 'Galones', 'Precio_USD', 'Total_USD', 'Kilometraje', 'Recorrido_Km'];
+      const r = (dashData.abastecimientos || []).map(a => [a.id_registro, a.fecha_hora, a.distrito, a.placa, a.tipo_combustible, a.cedula_conductor, a.nombre_conductor, a.galones, a.precio_galon, a.total_usd, a.kilometraje, a.recorrido_km]);
+      downloadCSVFile('Base_Abastecimientos.csv', [h, ...r]);
+    }
+
+    function exportBitacoraCSV() {
+      const h = ['ID', 'Fecha_Hora_GMT5', 'Distrito', 'Placa', 'Cartilla_ECU', 'Cedulas', 'Ocupantes', 'Actividad', 'Kilometraje', 'Latitud', 'Longitud'];
+      const r = (dashData.bitacora || []).map(b => [b.id_bitacora, formatCleanEcuadorDate(b.fecha_hora), b.distrito, b.placa, b.cartilla_ecu || b.numero_cartilla_ecu || '', b.cedulas_ocupantes, b.nombres_ocupantes, b.actividad, b.kilometraje, b.latitud, b.longitud]);
+      downloadCSVFile('Base_Bitacora.csv', [h, ...r]);
+    }
+
     function renderMap() {
-      if (!mapInstance) {
-        mapInstance = L.map('map').setView([-1.8312, -78.1834], 7);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '&copy; OpenStreetMap'
-        }).addTo(mapInstance);
-      }
-
-      mapInstance.eachLayer(layer => {
-        if (layer instanceof L.Marker) mapInstance.removeLayer(layer);
-      });
-
-      const bounds = [];
+      if (!mapInstance) { mapInstance = L.map('map').setView([-1.8312, -78.1834], 7); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapInstance); }
+      mapInstance.eachLayer(l => { if (l instanceof L.Marker) mapInstance.removeLayer(l); });
+      const bds = [];
       dashData.bitacora.forEach(b => {
-        const lat = parseFloat(b.latitud);
-        const lng = parseFloat(b.longitud);
-        if (!isNaN(lat) && !isNaN(lng)) {
-          bounds.push([lat, lng]);
-          L.marker([lat, lng]).addTo(mapInstance).bindPopup(`
-            <div style="font-size:12px; color:#0f172a;">
-              <b>Placa:</b> ${b.placa} (${b.distrito})<br>
-              <b>Fecha:</b> ${b.fecha_hora}<br>
-              <b>Personal:</b> ${b.nombres_ocupantes}<br>
-              <b>Actividad:</b> ${b.actividad}<br>
-              <b>Km Salida:</b> ${b.kilometraje} km
-            </div>
-          `);
-        }
+        const lat = parseFloat(b.latitud), lng = parseFloat(b.longitud);
+        if (!isNaN(lat) && !isNaN(lng)) { bds.push([lat, lng]); L.marker([lat, lng]).addTo(mapInstance).bindPopup(`<b>${b.placa}</b> | ECU: ${b.cartilla_ecu || 'S/N'}<br>${formatCleanEcuadorDate(b.fecha_hora)}<br>${b.actividad}`); }
       });
-
-      if (bounds.length > 0) mapInstance.fitBounds(bounds, { padding: [30, 30] });
+      if (bds.length) mapInstance.fitBounds(bds, { padding: [30, 30] });
       mapInstance.invalidateSize();
     }
 
-    // =========================================================================
-    // GESTIÓN DE FLOTA VEHICULAR Y PERSONAL ASIGNADO (CON SELECTOR DE GRADO)
-    // =========================================================================
     function addPersonalRow(cedula = '', nombres = '', grado = '', funcion = 'CONDUCTOR') {
-      const container = document.getElementById('personal-rows-container');
       const div = document.createElement('div');
       div.className = 'p-2.5 rounded-lg bg-slate-900 border border-slate-700 space-y-2 personal-item';
-      div.innerHTML = `
-        <div class="flex gap-2">
-          <input type="text" placeholder="Cédula" value="${cedula}" required oninput="this.value = this.value.replace(/[^0-9]/g, '')" class="p-cedula w-1/2 bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs">
-          <select required class="p-grado w-1/2 bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs">
-            ${getGradoOptionsHTML(grado)}
-          </select>
-        </div>
-        <div class="flex gap-2 items-center">
-          <input type="text" placeholder="Nombres y Apellidos" value="${nombres}" required class="p-nombres flex-1 bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs">
-          <select class="p-funcion bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs">
-            <option value="CONDUCTOR" ${funcion === 'CONDUCTOR' ? 'selected' : ''}>CONDUCTOR</option>
-            <option value="JP" ${funcion === 'JP' ? 'selected' : ''}>JP</option>
-            <option value="AUXILIAR" ${funcion === 'AUXILIAR' ? 'selected' : ''}>AUXILIAR</option>
-          </select>
-          <button type="button" onclick="this.closest('.personal-item').remove()" class="text-red-400 hover:text-red-300 px-1">
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
-      `;
-      container.appendChild(div);
+      div.innerHTML = `<div class="flex gap-2"><input type="text" placeholder="Cédula" value="${cedula}" required oninput="this.value=this.value.replace(/[^0-9]/g,'')" class="p-cedula w-1/2 bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs"><select required class="p-grado w-1/2 bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs">${getGradoOptionsHTML(grado)}</select></div><div class="flex gap-2 items-center"><input type="text" placeholder="Nombres" value="${nombres}" required class="p-nombres flex-1 bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs"><select class="p-funcion bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs"><option value="CONDUCTOR" ${funcion==='CONDUCTOR'?'selected':''}>CONDUCTOR</option><option value="JP" ${funcion==='JP'?'selected':''}>JP</option><option value="AUXILIAR" ${funcion==='AUXILIAR'?'selected':''}>AUXILIAR</option></select><button type="button" onclick="this.closest('.personal-item').remove()" class="text-red-400 px-1">&times;</button></div>`;
+      document.getElementById('personal-rows-container').appendChild(div);
     }
 
     async function handleSaveVehiculo(e) {
       e.preventDefault();
-      const vehiculo = {
-        placa: document.getElementById('veh-placa').value,
-        distrito: document.getElementById('veh-distrito').value,
-        marca_modelo: document.getElementById('veh-modelo').value
-      };
-      const personal = Array.from(document.querySelectorAll('.personal-item')).map(el => ({
-        cedula: el.querySelector('.p-cedula').value,
-        grado_designacion: el.querySelector('.p-grado').value,
-        nombres: el.querySelector('.p-nombres').value,
-        funcion: el.querySelector('.p-funcion').value
-      }));
-
-      try {
-        const resp = await apiCall('SAVE_VEHICULO', { vehiculo, personal });
-        showAlert(resp.message);
-        e.target.reset();
-        document.getElementById('personal-rows-container').innerHTML = '';
-        addPersonalRow();
-        await refreshDashboardData();
-        await loadPublicData();
-      } catch (err) {
-        showAlert(err.message, true);
-      }
+      const vehiculo = { placa: document.getElementById('veh-placa').value, distrito: document.getElementById('veh-distrito').value, tipo_combustible: document.getElementById('veh-combustible').value, marca_modelo: document.getElementById('veh-modelo').value };
+      const personal = Array.from(document.querySelectorAll('.personal-item')).map(el => ({ cedula: el.querySelector('.p-cedula').value, grado_designacion: el.querySelector('.p-grado').value, nombres: el.querySelector('.p-nombres').value, funcion: el.querySelector('.p-funcion').value }));
+      try { const resp = await apiCall('SAVE_VEHICULO', { vehiculo, personal }); showAlert(resp.message); e.target.reset(); document.getElementById('personal-rows-container').innerHTML = ''; addPersonalRow(); await refreshDashboardData(); }
+      catch (err) { showAlert(err.message, true); }
     }
 
     function renderVehiculosList() {
-      const container = document.getElementById('vehiculos-list');
-      if (dashData.vehiculos.length === 0) {
-        container.innerHTML = '<p class="text-xs text-slate-400">No hay vehículos registrados en este distrito.</p>';
-        return;
-      }
-
-      container.innerHTML = dashData.vehiculos.map(v => {
-        const tripulacion = dashData.personal.filter(p => String(p.placa).toUpperCase() === String(v.placa).toUpperCase());
-        return `
-          <div class="p-4 rounded-xl bg-slate-900/90 border border-slate-700 flex flex-col justify-between">
-            <div>
-              <div class="flex items-center justify-between border-b border-slate-800 pb-2 mb-2">
-                <span class="font-bold text-sm text-indigo-400">${v.placa}</span>
-                <span class="text-[11px] px-2 py-0.5 rounded bg-slate-800 text-slate-300">${v.distrito}</span>
-              </div>
-              <p class="text-xs text-slate-300 mb-2">${v.marca_modelo}</p>
-              <div class="space-y-1 text-[11px] text-slate-400">
-                ${tripulacion.map(t => `
-                  <div>• <b>${t.funcion}:</b>${t.grado_designacion} ${t.nombres} (${t.cedula})</div>
-                `).join('')}
-              </div>
-            </div>
-            <div class="mt-4 pt-2 border-t border-slate-800 flex justify-end gap-2">
-              <button onclick='loadVehiculoForEdit(${JSON.stringify(v)}, ${JSON.stringify(tripulacion)})' class="px-2.5 py-1 rounded bg-sky-500/20 text-sky-300 text-xs">
-                Editar
-              </button>
-              <button onclick="handleDeleteVehiculo('${v.placa}')" class="px-2.5 py-1 rounded bg-red-500/20 text-red-300 text-xs">
-                Eliminar
-              </button>
-            </div>
-          </div>
-        `;
-      }).join('');
+      document.getElementById('vehiculos-list').innerHTML = dashData.vehiculos.map(v => {
+        const trip = dashData.personal.filter(p => String(p.placa).toUpperCase() === String(v.placa).toUpperCase());
+        return `<div class="p-4 rounded-xl bg-slate-900/90 border border-slate-700 flex flex-col justify-between"><div><div class="flex justify-between border-b border-slate-800 pb-2 mb-2"><span class="font-bold text-sm text-indigo-400">${v.placa} <span class="text-amber-400 text-xs">[${v.tipo_combustible || 'ECO'}]</span></span><span class="text-[11px] px-2 py-0.5 rounded bg-slate-800">${v.distrito}</span></div><p class="text-xs text-slate-300 mb-2">${v.marca_modelo}</p><div class="space-y-1 text-[11px] text-slate-400">${trip.map(t => `<div>• <b>${t.funcion}:</b>${t.grado_designacion} ${t.nombres} (${t.cedula})</div>`).join('')}</div></div><div class="mt-4 pt-2 border-t border-slate-800 flex justify-end gap-2 text-xs"><button onclick='loadVehiculoForEdit(${JSON.stringify(v)}, ${JSON.stringify(trip)})' class="px-2.5 py-1 rounded bg-sky-500/20 text-sky-300">Editar</button><button onclick="handleDeleteVehiculo('${v.placa}')" class="px-2.5 py-1 rounded bg-red-500/20 text-red-300">Eliminar</button></div></div>`;
+      }).join('') || '<p class="text-xs text-slate-400">Sin vehículos.</p>';
     }
 
-    function loadVehiculoForEdit(v, tripulacion) {
+    function loadVehiculoForEdit(v, trip) {
       document.getElementById('veh-placa').value = v.placa;
-      // Asegurar que el distrito exista en el select antes de asignarlo
-      const distSelect = document.getElementById('veh-distrito');
-      if (![...distSelect.options].some(o => o.value === v.distrito)) {
-        distSelect.innerHTML += `<option value="${v.distrito}">${v.distrito}</option>`;
-      }
-      distSelect.value = v.distrito;
+      document.getElementById('veh-distrito').value = v.distrito;
+      document.getElementById('veh-combustible').value = v.tipo_combustible || 'ECO';
       document.getElementById('veh-modelo').value = v.marca_modelo;
-      const container = document.getElementById('personal-rows-container');
-      container.innerHTML = '';
-      tripulacion.forEach(t => addPersonalRow(t.cedula, t.nombres, t.grado_designacion, t.funcion));
+      document.getElementById('personal-rows-container').innerHTML = '';
+      trip.forEach(t => addPersonalRow(t.cedula, t.nombres, t.grado_designacion, t.funcion));
     }
 
     async function handleDeleteVehiculo(placa) {
-      if (!confirm(`¿Eliminar el vehículo ${placa} y desvincular su personal?`)) return;
-      try {
-        const resp = await apiCall('DELETE_VEHICULO', { placa });
-        showAlert(resp.message);
-        await refreshDashboardData();
-        await loadPublicData();
-      } catch (err) {
-        showAlert(err.message, true);
-      }
+      if (!confirm(`¿Eliminar ${placa}?`)) return;
+      try { await apiCall('DELETE_VEHICULO', { placa }); await refreshDashboardData(); }
+      catch (err) { showAlert(err.message, true); }
     }
 
-    // =========================================================================
-    // CREACIÓN DE USUARIOS Y GENERACIÓN DE QRs
-    // =========================================================================
-    function toggleUserDistritoInput() {
-      const rol = document.getElementById('usr-rol').value;
-      document.getElementById('usr-distrito-box').style.display = rol === 'SUPERADMIN' ? 'none' : 'block';
-    }
+    function toggleUserDistritoInput() { document.getElementById('usr-distrito-box').style.display = document.getElementById('usr-rol').value === 'SUPERADMIN' ? 'none' : 'block'; }
 
     async function handleCreateUser(e) {
       e.preventDefault();
-      const rol = document.getElementById('usr-rol').value;
-      const distrito = document.getElementById('usr-distrito').value;
-      if (rol === 'ADMIN' && !distrito) {
-        showAlert('Seleccione un Distrito del catálogo para el usuario Admin.', true);
-        return;
-      }
-      try {
-        const newUser = {
-          email: document.getElementById('usr-email').value,
-          nombre: document.getElementById('usr-nombre').value,
-          rol: rol,
-          distrito: rol === 'SUPERADMIN' ? 'TODOS' : distrito
-        };
-        const resp = await apiCall('CREATE_USER', { adminUser: currentUser, newUser });
-        showAlert(resp.message);
-        e.target.reset();
-        populateAllDistritoSelectors();
-      } catch (err) {
-        showAlert(err.message, true);
-      }
+      const rol = document.getElementById('usr-rol').value, dist = document.getElementById('usr-distrito').value;
+      try { const resp = await apiCall('CREATE_USER', { adminUser: currentUser, newUser: { email: document.getElementById('usr-email').value, nombre: document.getElementById('usr-nombre').value, rol, distrito: rol === 'SUPERADMIN' ? 'TODOS' : dist } }); showAlert(resp.message); e.target.reset(); }
+      catch (err) { showAlert(err.message, true); }
     }
 
     function generateQRCodes() {
-      const baseUrl = window.location.origin + window.location.pathname;
-      const urlAbs = `${baseUrl}?form=abastecimiento`;
-      const urlBit = `${baseUrl}?form=bitacora`;
-
-      document.getElementById('url-abs-text').innerText = urlAbs;
-      document.getElementById('url-bit-text').innerText = urlBit;
-
-      new QRCode(document.getElementById('qr-abastecimiento'), { text: urlAbs, width: 180, height: 180 });
-      new QRCode(document.getElementById('qr-bitacora'), { text: urlBit, width: 180, height: 180 });
+      const base = window.location.origin + window.location.pathname;
+      const u1 = `${base}?form=abastecimiento`, u2 = `${base}?form=bitacora`;
+      document.getElementById('url-abs-text').innerText = u1; document.getElementById('url-bit-text').innerText = u2;
+      new QRCode(document.getElementById('qr-abastecimiento'), { text: u1, width: 180, height: 180 });
+      new QRCode(document.getElementById('qr-bitacora'), { text: u2, width: 180, height: 180 });
     }
   </script>
 </body>
