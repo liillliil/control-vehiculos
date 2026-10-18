@@ -628,16 +628,11 @@
       );
     }
 
-        async function handleAbastecimientoSubmit(e) {
+          async function handleAbastecimientoSubmit(e) {
       e.preventDefault();
       
       const fotoInput = document.getElementById('abs-factura-base64');
       const fotoPng = fotoInput ? fotoInput.value.trim() : '';
-
-      if (!fotoPng || fotoPng.length < 50) { 
-        showAlert('Es obligatorio tomar la fotografía en vivo de la factura de combustible.', true); 
-        return; 
-      }
 
       try {
         const data = {
@@ -656,13 +651,12 @@
         
         // LIMPIAR FORMULARIO COMPLETAMENTE TRAS ENVIO EXITOSO
         document.getElementById('form-abastecimiento').reset();
-        fotoInput.value = '';
-        document.getElementById('snapshot-preview-box').classList.add('hidden');
-        document.getElementById('snapshot-preview-img').src = '';
+        if (fotoInput) fotoInput.value = '';
       } catch (err) { 
         showAlert(err.message, true); 
       }
     }
+
 
 
     async function handleBitacoraSubmit(e) {
