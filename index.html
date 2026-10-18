@@ -124,6 +124,11 @@
                 <i class="fas fa-map-marked-alt text-emerald-400 w-5"></i>
                 <span>Mapa de Operaciones GPS</span>
               </button>
+              <!-- NUEVA PÁGINA CATÁLOGOS EXCLUSIVA SUPERADMIN -->
+              <button id="menu-catalogos-btn" onclick="showSection('sec-dash-catalogos')" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg hover:bg-sky-500/20 text-left text-sm transition">
+                <i class="fas fa-folder-tree text-cyan-400 w-5"></i>
+                <span>Catálogos (Distritos / Grados)</span>
+              </button>
               <button onclick="showSection('sec-dash-vehiculos')" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg hover:bg-sky-500/20 text-left text-sm transition">
                 <i class="fas fa-car-side text-indigo-400 w-5"></i>
                 <span>Flota Vehicular y Personal</span>
@@ -184,7 +189,7 @@
 
           <div>
             <label class="block text-xs font-semibold uppercase text-slate-300 mb-1">3. Cédula del Conductor</label>
-            <input type="text" id="abs-cedula" required placeholder="Ej: 1712345678" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm focus:border-sky-400 focus:outline-none">
+            <input type="text" id="abs-cedula" required pattern="[0-9]{10}" title="Ingrese un número de cédula válido (10 dígitos)" placeholder="Ej: 1712345678" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm focus:border-sky-400 focus:outline-none">
             <p class="text-[11px] text-slate-400 mt-1">El sistema validará que esta cédula conste con función CONDUCTOR en esta placa.</p>
           </div>
 
@@ -232,10 +237,18 @@
             </select>
           </div>
 
+          <!-- CAMBIO 2: INPUT INDIVIDUAL POR CÉDULA CON BOTÓN + -->
           <div>
-            <label class="block text-xs font-semibold uppercase text-slate-300 mb-1">3. Cédula(s) del Personal en el Vehículo</label>
-            <input type="text" id="bit-cedulas" required placeholder="Ej: 1712345678, 0987654321" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm focus:border-sky-400 focus:outline-none">
-            <p class="text-[11px] text-slate-400 mt-1">Si van varias personas, separe las cédulas por coma. Todas deben estar vinculadas al vehículo.</p>
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="block text-xs font-semibold uppercase text-slate-300">3. Cédula(s) del Personal en el Vehículo</label>
+              <button type="button" onclick="addBitacoraCedulaInput()" class="px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 text-xs font-bold flex items-center gap-1 transition">
+                <i class="fas fa-plus"></i> Agregar Cédula
+              </button>
+            </div>
+            <div id="bit-cedulas-container" class="space-y-2">
+              <!-- Se genera dinámicamente un input por cada cédula -->
+            </div>
+            <p class="text-[11px] text-slate-400 mt-1">Ingrese una sola cédula por casilla. Use el botón <b>+ Agregar Cédula</b> si van más ocupantes.</p>
           </div>
 
           <div>
@@ -388,6 +401,48 @@
         </div>
       </section>
 
+      <!-- CAMBIO 1: NUEVA SECCION DE CATALOGOS (EXCLUSIVO SUPERADMIN) -->
+      <section id="sec-dash-catalogos" class="view-section hidden space-y-6">
+        <div class="glass-card p-5 rounded-2xl">
+          <h2 class="text-xl font-bold flex items-center gap-2 text-cyan-400">
+            <i class="fas fa-folder-tree"></i> Administración de Catálogos del Sistema
+          </h2>
+          <p class="text-xs text-slate-400 mt-1">
+            Configure las opciones oficiales que aparecerán en los selectores desplegables de <b>Distrito</b> y <b>Grado / Designación</b> en todo el sistema.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- CATALOGO DISTRITOS -->
+          <div class="glass-card p-5 rounded-2xl space-y-4">
+            <h3 class="text-base font-bold text-sky-400 flex items-center gap-2">
+              <i class="fas fa-map-location-dot"></i> Catálogo de Distritos
+            </h3>
+            <form onsubmit="handleAddCatalogo(event, 'DISTRITO', 'cat-input-distrito')" class="flex gap-2">
+              <input type="text" id="cat-input-distrito" required placeholder="Ej: DISTRITO MODELO" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs uppercase">
+              <button type="submit" class="px-4 py-2 rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs transition">
+                <i class="fas fa-plus mr-1"></i> Agregar
+              </button>
+            </form>
+            <div id="list-cat-distrito" class="space-y-1.5 max-h-72 overflow-y-auto pr-1"></div>
+          </div>
+
+          <!-- CATALOGO GRADO / DESIGNACION -->
+          <div class="glass-card p-5 rounded-2xl space-y-4">
+            <h3 class="text-base font-bold text-emerald-400 flex items-center gap-2">
+              <i class="fas fa-id-badge"></i> Catálogo de Grado / Designación
+            </h3>
+            <form onsubmit="handleAddCatalogo(event, 'GRADO', 'cat-input-grado')" class="flex gap-2">
+              <input type="text" id="cat-input-grado" required placeholder="Ej: Cptn. / Tnte. / Sgop." class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs">
+              <button type="submit" class="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition">
+                <i class="fas fa-plus mr-1"></i> Agregar
+              </button>
+            </form>
+            <div id="list-cat-grado" class="space-y-1.5 max-h-72 overflow-y-auto pr-1"></div>
+          </div>
+        </div>
+      </section>
+
       <!-- SECCION 7: GESTION DE VEHICULOS Y PERSONAL -->
       <section id="sec-dash-vehiculos" class="view-section hidden grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div class="glass-card p-5 rounded-2xl space-y-4">
@@ -398,8 +453,10 @@
               <input type="text" id="veh-placa" required placeholder="Ej: PEA-1234" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs uppercase">
             </div>
             <div>
-              <label class="block text-xs text-slate-300 mb-1">Distrito Asignado</label>
-              <input type="text" id="veh-distrito" required placeholder="Ej: DISTRITO SUR" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs uppercase">
+              <label class="block text-xs text-slate-300 mb-1">Distrito Asignado (Catálogo)</label>
+              <select id="veh-distrito" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs">
+                <option value="">Seleccione un distrito...</option>
+              </select>
             </div>
             <div>
               <label class="block text-xs text-slate-300 mb-1">Marca / Modelo / Tipo</label>
@@ -450,8 +507,10 @@
               </select>
             </div>
             <div id="usr-distrito-box">
-              <label class="block text-xs text-slate-300 mb-1">Distrito Asignado</label>
-              <input type="text" id="usr-distrito" placeholder="Ej: DISTRITO MODELO" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs uppercase">
+              <label class="block text-xs text-slate-300 mb-1">Distrito Asignado (Catálogo)</label>
+              <select id="usr-distrito" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs">
+                <option value="">Seleccione un distrito...</option>
+              </select>
             </div>
             <button type="submit" class="w-full py-2.5 rounded-xl bg-purple-500 hover:bg-purple-400 text-slate-950 font-bold text-xs transition">
               Crear Usuario y Enviar Clave Temporal
@@ -512,10 +571,9 @@
     // =========================================================================
     const API_URL = 'https://script.google.com/macros/s/AKfycbz27sSZ4-73_dSrDcuyYN7O_bYSRJrm1v_ZOMKbnXKPpo4KcJu7K7nnM1eLWTYPWI-XBA/exec';
 
-
-    let publicData = { vehiculos: [], distritos: [] };
+    let publicData = { vehiculos: [], distritos: [], grados: [] };
     let currentUser = null;
-    let dashData = { vehiculos: [], personal: [], abastecimientos: [], bitacora: [], usuarios: [] };
+    let dashData = { vehiculos: [], personal: [], abastecimientos: [], bitacora: [], usuarios: [], catalogos: [] };
     let mapInstance = null;
 
     // Reloj en tiempo real
@@ -525,10 +583,9 @@
     }, 1000);
 
     window.addEventListener('DOMContentLoaded', async () => {
-      addPersonalRow(); // Fila inicial por defecto en creador de vehículos
+      resetBitacoraCedulas(); // Inicializa 1 casilla de cédula en Formulario 2
       generateQRCodes();
       
-      // Detectar si viene desde un escaneo QR por parámetro URL (?form=abastecimiento o ?form=bitacora)
       const params = new URLSearchParams(window.location.search);
       const formTarget = params.get('form');
       if (formTarget === 'bitacora') {
@@ -541,6 +598,7 @@
       }
 
       await loadPublicData();
+      addPersonalRow(); // Inicializa fila de personal con el catálogo de grados cargado
     });
 
     function toggleSidebar() {
@@ -567,9 +625,6 @@
     }
 
     async function apiCall(action, payload = {}) {
-      if (API_URL.includes('PEGAR_AQUI')) {
-        throw new Error('Configure la constante API_URL con la URL de su implementación de Google Apps Script.');
-      }
       const res = await fetch(API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -582,20 +637,39 @@
 
     async function loadPublicData() {
       try {
-        publicData = await apiCall('GET_PUBLIC_DATA');
-        populateDistritoSelectors();
+        const data = await apiCall('GET_PUBLIC_DATA');
+        publicData.vehiculos = data.vehiculos || [];
+        publicData.distritos = data.distritos || [];
+        publicData.grados = data.grados || [];
+        populateAllDistritoSelectors();
+        refreshGradoSelectsInDOM();
       } catch (e) {
-        console.warn('Modo vista previa o sin conexión:', e.message);
+        console.warn('Error cargando datos iniciales:', e.message);
       }
     }
 
-    function populateDistritoSelectors() {
-      ['abs-distrito', 'bit-distrito'].forEach(selId => {
+    // Llena todos los selectores de Distrito (Formularios QR, Vehículos y Usuarios)
+    function populateAllDistritoSelectors() {
+      const distritosList = publicData.distritos || [];
+      ['abs-distrito', 'bit-distrito', 'veh-distrito', 'usr-distrito'].forEach(selId => {
         const sel = document.getElementById(selId);
+        if (!sel) return;
+        const currentVal = sel.value;
+
+        // Si el usuario logueado es ADMIN (no SuperAdmin), restringe los selectores administrativos a su distrito
+        if (currentUser && currentUser.rol !== 'SUPERADMIN' && (selId === 'veh-distrito' || selId === 'usr-distrito')) {
+          sel.innerHTML = `<option value="${currentUser.distrito}">${currentUser.distrito}</option>`;
+          sel.value = currentUser.distrito;
+          return;
+        }
+
         sel.innerHTML = '<option value="">Seleccione un distrito...</option>';
-        publicData.distritos.forEach(d => {
+        distritosList.forEach(d => {
           sel.innerHTML += `<option value="${d}">${d}</option>`;
         });
+        if (currentVal && distritosList.includes(currentVal)) {
+          sel.value = currentVal;
+        }
       });
     }
 
@@ -611,6 +685,44 @@
     }
 
     // =========================================================================
+    // CAMBIO 2: GESTIÓN DE INPUTS DINÁMICOS DE CÉDULA EN BITÁCORA (+)
+    // =========================================================================
+    function addBitacoraCedulaInput(valor = '') {
+      const container = document.getElementById('bit-cedulas-container');
+      const count = container.querySelectorAll('.bit-cedula-row').length;
+      const row = document.createElement('div');
+      row.className = 'flex items-center gap-2 bit-cedula-row';
+      row.innerHTML = `
+        <input type="text" required value="${valor}"
+          placeholder="Cédula Ocupante #${count + 1} (Ej: 1712345678)"
+          oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+          maxlength="13"
+          class="bit-cedula-item flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm focus:border-sky-400 focus:outline-none">
+        ${count > 0 ? `
+          <button type="button" onclick="removeBitacoraCedulaInput(this)" class="px-3 py-2.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs transition" title="Quitar cédula">
+            <i class="fas fa-trash"></i>
+          </button>
+        ` : ''}
+      `;
+      container.appendChild(row);
+    }
+
+    function removeBitacoraCedulaInput(btn) {
+      btn.closest('.bit-cedula-row').remove();
+      // Renumerar los placeholders
+      document.querySelectorAll('#bit-cedulas-container .bit-cedula-item').forEach((inp, idx) => {
+        inp.placeholder = `Cédula Ocupante #${idx + 1} (Ej: 1712345678)`;
+      });
+    }
+
+    function resetBitacoraCedulas() {
+      const container = document.getElementById('bit-cedulas-container');
+      if (!container) return;
+      container.innerHTML = '';
+      addBitacoraCedulaInput();
+    }
+
+    // =========================================================================
     // ENVÍO DE FORMULARIOS QR (ABASTECIMIENTO Y BITÁCORA)
     // =========================================================================
     async function handleAbastecimientoSubmit(e) {
@@ -619,7 +731,7 @@
         const data = {
           distrito: document.getElementById('abs-distrito').value,
           placa: document.getElementById('abs-placa').value,
-          cedula: document.getElementById('abs-cedula').value,
+          cedula: document.getElementById('abs-cedula').value.trim(),
           galones: document.getElementById('abs-galones').value,
           kilometraje: document.getElementById('abs-km').value
         };
@@ -664,11 +776,21 @@
         captureGPS();
         return;
       }
+
+      const cedulasArray = Array.from(document.querySelectorAll('.bit-cedula-item'))
+        .map(inp => inp.value.trim())
+        .filter(Boolean);
+
+      if (cedulasArray.length === 0) {
+        showAlert('Debe ingresar al menos una cédula.', true);
+        return;
+      }
+
       try {
         const data = {
           distrito: document.getElementById('bit-distrito').value,
           placa: document.getElementById('bit-placa').value,
-          cedulas: document.getElementById('bit-cedulas').value,
+          cedulas: cedulasArray,
           actividad: document.getElementById('bit-actividad').value,
           kilometraje: document.getElementById('bit-km').value,
           latitud: lat,
@@ -677,6 +799,7 @@
         const resp = await apiCall('SUBMIT_BITACORA', { data });
         showAlert(`${resp.message} Personal: ${resp.ocupantes.join(', ')}`);
         e.target.reset();
+        resetBitacoraCedulas();
         document.getElementById('gps-status').innerText = 'Pendiente de captura...';
       } catch (err) {
         showAlert(err.message, true);
@@ -733,18 +856,15 @@
       if (currentUser.rol !== 'SUPERADMIN') {
         document.getElementById('superadmin-auth-box').classList.add('hidden');
         document.getElementById('opt-superadmin').classList.add('hidden');
-        document.getElementById('veh-distrito').value = currentUser.distrito;
-        document.getElementById('veh-distrito').readOnly = true;
-        document.getElementById('usr-distrito').value = currentUser.distrito;
-        document.getElementById('usr-distrito').readOnly = true;
+        document.getElementById('menu-catalogos-btn').classList.add('hidden');
       } else {
         document.getElementById('superadmin-auth-box').classList.remove('hidden');
         document.getElementById('opt-superadmin').classList.remove('hidden');
-        document.getElementById('veh-distrito').readOnly = false;
-        document.getElementById('usr-distrito').readOnly = false;
+        document.getElementById('menu-catalogos-btn').classList.remove('hidden');
       }
 
       await refreshDashboardData();
+      populateAllDistritoSelectors();
       showSection('sec-dash-bitacora');
     }
 
@@ -754,14 +874,107 @@
       document.getElementById('menu-login-btn').classList.remove('hidden');
       document.getElementById('btnLogout').classList.add('hidden');
       document.getElementById('activeUserBadge').classList.add('hidden');
+      populateAllDistritoSelectors();
       showSection('sec-login');
     }
 
     async function refreshDashboardData() {
       dashData = await apiCall('GET_DASHBOARD_DATA', { user: currentUser });
+      
+      // Sincronizar catálogos con selectores globales
+      if (dashData.catalogos) {
+        const distCat = dashData.catalogos.filter(c => c.tipo === 'DISTRITO').map(c => c.valor);
+        const gradCat = dashData.catalogos.filter(c => c.tipo === 'GRADO').map(c => c.valor);
+        publicData.distritos = [...new Set([...distCat, ...dashData.vehiculos.map(v => v.distrito).filter(Boolean)])];
+        publicData.grados = gradCat;
+        populateAllDistritoSelectors();
+        refreshGradoSelectsInDOM();
+        renderCatalogosLists();
+      }
+
       renderBitacoraTimeline();
       renderAbastecimientosTable();
       renderVehiculosList();
+    }
+
+    // =========================================================================
+    // CAMBIO 1: FUNCIONES DE ADMINISTRACIÓN DE CATÁLOGOS (DISTRITOS Y GRADOS)
+    // =========================================================================
+    function renderCatalogosLists() {
+      const distContainer = document.getElementById('list-cat-distrito');
+      const gradoContainer = document.getElementById('list-cat-grado');
+      if (!distContainer || !gradoContainer) return;
+
+      const distritos = (dashData.catalogos || []).filter(c => c.tipo === 'DISTRITO');
+      const grados = (dashData.catalogos || []).filter(c => c.tipo === 'GRADO');
+
+      distContainer.innerHTML = distritos.length === 0
+        ? '<p class="text-xs text-slate-400">No hay distritos en el catálogo.</p>'
+        : distritos.map(d => `
+          <div class="flex items-center justify-between px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 text-xs">
+            <span class="font-semibold text-slate-200">${d.valor}</span>
+            <button onclick="handleDeleteCatalogo('${d.id_item}')" class="text-red-400 hover:text-red-300">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        `).join('');
+
+      gradoContainer.innerHTML = grados.length === 0
+        ? '<p class="text-xs text-slate-400">No hay grados/designaciones en el catálogo.</p>'
+        : grados.map(g => `
+          <div class="flex items-center justify-between px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 text-xs">
+            <span class="font-semibold text-slate-200">${g.valor}</span>
+            <button onclick="handleDeleteCatalogo('${g.id_item}')" class="text-red-400 hover:text-red-300">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        `).join('');
+    }
+
+    async function handleAddCatalogo(e, tipo, inputId) {
+      e.preventDefault();
+      const inp = document.getElementById(inputId);
+      const valor = inp.value.trim();
+      if (!valor) return;
+      try {
+        const resp = await apiCall('ADD_CATALOGO', { user: currentUser, tipo, valor });
+        showAlert(resp.message);
+        inp.value = '';
+        await refreshDashboardData();
+      } catch (err) {
+        showAlert(err.message, true);
+      }
+    }
+
+    async function handleDeleteCatalogo(id_item) {
+      if (!confirm('¿Eliminar esta opción del catálogo?')) return;
+      try {
+        const resp = await apiCall('DELETE_CATALOGO', { user: currentUser, id_item });
+        showAlert(resp.message);
+        await refreshDashboardData();
+      } catch (err) {
+        showAlert(err.message, true);
+      }
+    }
+
+    function getGradoOptionsHTML(selectedVal = '') {
+      const list = publicData.grados || [];
+      let html = '<option value="">Grado / Designación...</option>';
+      list.forEach(g => {
+        const sel = g === selectedVal ? 'selected' : '';
+        html += `<option value="${g}" ${sel}>${g}</option>`;
+      });
+      if (selectedVal && !list.includes(selectedVal)) {
+        html += `<option value="${selectedVal}" selected>${selectedVal}</option>`;
+      }
+      return html;
+    }
+
+    function refreshGradoSelectsInDOM() {
+      document.querySelectorAll('.p-grado').forEach(sel => {
+        const current = sel.value;
+        sel.innerHTML = getGradoOptionsHTML(current);
+      });
     }
 
     // =========================================================================
@@ -942,7 +1155,7 @@
     }
 
     // =========================================================================
-    // GESTIÓN DE FLOTA VEHICULAR Y PERSONAL ASIGNADO
+    // GESTIÓN DE FLOTA VEHICULAR Y PERSONAL ASIGNADO (CON SELECTOR DE GRADO)
     // =========================================================================
     function addPersonalRow(cedula = '', nombres = '', grado = '', funcion = 'CONDUCTOR') {
       const container = document.getElementById('personal-rows-container');
@@ -950,8 +1163,10 @@
       div.className = 'p-2.5 rounded-lg bg-slate-900 border border-slate-700 space-y-2 personal-item';
       div.innerHTML = `
         <div class="flex gap-2">
-          <input type="text" placeholder="Cédula" value="${cedula}" required class="p-cedula w-1/2 bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs">
-          <input type="text" placeholder="Grado / Designación" value="${grado}" required class="p-grado w-1/2 bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs">
+          <input type="text" placeholder="Cédula" value="${cedula}" required oninput="this.value = this.value.replace(/[^0-9]/g, '')" class="p-cedula w-1/2 bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs">
+          <select required class="p-grado w-1/2 bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs">
+            ${getGradoOptionsHTML(grado)}
+          </select>
         </div>
         <div class="flex gap-2 items-center">
           <input type="text" placeholder="Nombres y Apellidos" value="${nombres}" required class="p-nombres flex-1 bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs">
@@ -1033,7 +1248,12 @@
 
     function loadVehiculoForEdit(v, tripulacion) {
       document.getElementById('veh-placa').value = v.placa;
-      document.getElementById('veh-distrito').value = v.distrito;
+      // Asegurar que el distrito exista en el select antes de asignarlo
+      const distSelect = document.getElementById('veh-distrito');
+      if (![...distSelect.options].some(o => o.value === v.distrito)) {
+        distSelect.innerHTML += `<option value="${v.distrito}">${v.distrito}</option>`;
+      }
+      distSelect.value = v.distrito;
       document.getElementById('veh-modelo').value = v.marca_modelo;
       const container = document.getElementById('personal-rows-container');
       container.innerHTML = '';
@@ -1062,16 +1282,23 @@
 
     async function handleCreateUser(e) {
       e.preventDefault();
+      const rol = document.getElementById('usr-rol').value;
+      const distrito = document.getElementById('usr-distrito').value;
+      if (rol === 'ADMIN' && !distrito) {
+        showAlert('Seleccione un Distrito del catálogo para el usuario Admin.', true);
+        return;
+      }
       try {
         const newUser = {
           email: document.getElementById('usr-email').value,
           nombre: document.getElementById('usr-nombre').value,
-          rol: document.getElementById('usr-rol').value,
-          distrito: document.getElementById('usr-distrito').value.toUpperCase()
+          rol: rol,
+          distrito: rol === 'SUPERADMIN' ? 'TODOS' : distrito
         };
         const resp = await apiCall('CREATE_USER', { adminUser: currentUser, newUser });
         showAlert(resp.message);
         e.target.reset();
+        populateAllDistritoSelectors();
       } catch (err) {
         showAlert(err.message, true);
       }
