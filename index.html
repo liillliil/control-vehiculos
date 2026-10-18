@@ -115,7 +115,7 @@
           <div class="p-3 rounded-xl bg-amber-500/20 text-amber-400"><i class="fas fa-gas-pump text-2xl"></i></div>
           <div><h2 class="text-xl font-bold">Registro de Abastecimiento</h2><p class="text-xs text-slate-400">Verificación de conductor y captura en pantalla completa</p></div>
         </div>
-        <form onsubmit="handleAbastecimientoSubmit(event)" class="space-y-4">
+        <form id="form-abastecimiento" onsubmit="handleAbastecimientoSubmit(event)" class="space-y-4">
           <div><label class="block text-xs font-semibold uppercase text-slate-300 mb-1">1. Distrito Operativo</label><select id="abs-distrito" required onchange="filterPlacasByDistrito('abs-distrito', 'abs-placa')" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm"></select></div>
           <div><label class="block text-xs font-semibold uppercase text-slate-300 mb-1">2. Placa del Vehículo</label><select id="abs-placa" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm"><option value="">Primero escoja un distrito...</option></select></div>
           <div><label class="block text-xs font-semibold uppercase text-slate-300 mb-1">3. Cédula del Conductor</label><input type="text" id="abs-cedula" required oninput="this.value=this.value.replace(/[^0-9]/g,'')" maxlength="13" placeholder="Ej: 1712345678" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm"></div>
@@ -133,7 +133,7 @@
               <img id="snapshot-preview-img" class="w-full max-h-56 object-contain rounded-lg border border-emerald-500/40 bg-slate-950 p-1">
               <button type="button" onclick="startFullscreenCamera()" class="px-3 py-1 rounded bg-slate-800 text-xs text-amber-300"><i class="fas fa-redo mr-1"></i> Volver a Tomar Foto</button>
             </div>
-            <input type="hidden" id="abs-factura-base64" required>
+            <input type="hidden" id="abs-factura-base64">
           </div>
           <button type="submit" class="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-sm shadow-lg"><i class="fas fa-save mr-2"></i> Registrar Abastecimiento</button>
         </form>
@@ -151,7 +151,7 @@
           <div class="p-3 rounded-xl bg-emerald-500/20 text-emerald-400"><i class="fas fa-route text-2xl"></i></div>
           <div><h2 class="text-xl font-bold">Bitácora de Salida Operativa</h2><p class="text-xs text-slate-400">Verificación de tripulación, Cartilla ECU 911 y GPS</p></div>
         </div>
-        <form onsubmit="handleBitacoraSubmit(event)" class="space-y-4">
+        <form id="form-bitacora" onsubmit="handleBitacoraSubmit(event)" class="space-y-4">
           <div><label class="block text-xs font-semibold uppercase text-slate-300 mb-1">1. Distrito Operativo</label><select id="bit-distrito" required onchange="filterPlacasByDistrito('bit-distrito', 'bit-placa')" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm"></select></div>
           <div><label class="block text-xs font-semibold uppercase text-slate-300 mb-1">2. Placa del Vehículo</label><select id="bit-placa" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm"><option value="">Primero escoja un distrito...</option></select></div>
           <div>
@@ -509,20 +509,17 @@
       });
     }
 
-    // CAMARA EN PANTALLA COMPLETA
-        // CAMARA EN PANTALLA COMPLETA CORREGIDA
+    // CAMARA EN PANTALLA COMPLETA CORREGIDA Y ROBUSTA
     async function startFullscreenCamera() {
       try {
         const modal = document.getElementById('fullscreen-camera-modal');
         modal.classList.remove('hidden');
         const videoEl = document.getElementById('fullscreen-video');
         
-        // Forzar uso de la cámara trasera en dispositivos móviles
         activeCameraStream = await navigator.mediaDevices.getUserMedia({ 
-          video: { facingMode: { exact: 'environment' }, width: { ideal: 1280 }, height: { ideal: 960 } }, 
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 960 } }, 
           audio: false 
         }).catch(() => {
-          // Si el dispositivo no soporta 'exact: environment', usa cualquier cámara disponible
           return navigator.mediaDevices.getUserMedia({ video: true, audio: false });
         });
 
@@ -530,7 +527,7 @@
         await videoEl.play();
       } catch (err) {
         stopFullscreenCamera();
-        showAlert('No se pudo activar la cámara. Asegúrese de otorgar permisos de cámara en su navegador o dispositivo.', true);
+        showAlert('No se pudo activar la cámara. Otorgue permisos en su navegador.', true);
       }
     }
 
@@ -546,47 +543,32 @@
     function takeFullscreenSnapshot() {
       const v = document.getElementById('fullscreen-video');
       const c = document.getElementById('snapshot-canvas');
-      
       if (!v || !v.videoWidth || !v.videoHeight) {
-        showAlert('La cámara está enfocando, intente de nuevo en un segundo.', true);
+        showAlert('La cámara está enfocando, intente de nuevo.', true);
         return;
       }
-
-      // Redimensionar para optimizar el peso de la imagen base64
-      const maxW = 800;
+      const maxW = 900;
       const scale = v.videoWidth > maxW ? maxW / v.videoWidth : 1;
       c.width = v.videoWidth * scale; 
       c.height = v.videoHeight * scale;
-      
       const ctx = c.getContext('2d');
       ctx.drawImage(v, 0, 0, c.width, c.height);
 
-      // Convertir a formato PNG comprimido
       const pngDataUrl = c.toDataURL('image/png', 0.85);
       
-      // Asignar al input oculto de manera estricta
       const hiddenInput = document.getElementById('abs-factura-base64');
-      if (hiddenInput) {
-        hiddenInput.value = pngDataUrl;
-      }
-      
-      // Mostrar previsualización
+      if (hiddenInput) hiddenInput.value = pngDataUrl;
+
       const previewImg = document.getElementById('snapshot-preview-img');
-      if (previewImg) {
-        previewImg.src = pngDataUrl;
-      }
+      if (previewImg) previewImg.src = pngDataUrl;
 
       stopFullscreenCamera();
       
       const previewBox = document.getElementById('snapshot-preview-box');
-      if (previewBox) {
-        previewBox.classList.remove('hidden');
-      }
+      if (previewBox) previewBox.classList.remove('hidden');
 
       showAlert('¡Fotografía de factura capturada con éxito!');
     }
-
-
 
     function openInvoiceModal(png, placa, fecha) {
       if (!png) { showAlert('Sin imagen de factura.', true); return; }
@@ -659,9 +641,12 @@
         const resp = await apiCall('SUBMIT_ABASTECIMIENTO', { data });
         const alertaTxt = resp.alertas && resp.alertas.length ? ` | ALERTA: ${resp.alertas.join(' / ')}` : '';
         showAlert(`${resp.message} Conductor: ${resp.conductor}${alertaTxt}`);
-        e.target.reset();
+        
+        // LIMPIAR FORMULARIO COMPLETAMENTE TRAS ENVIO
+        document.getElementById('form-abastecimiento').reset();
         document.getElementById('abs-factura-base64').value = '';
         document.getElementById('snapshot-preview-box').classList.add('hidden');
+        document.getElementById('snapshot-preview-img').src = '';
       } catch (err) { showAlert(err.message, true); }
     }
 
@@ -681,7 +666,11 @@
         };
         const resp = await apiCall('SUBMIT_BITACORA', { data });
         showAlert(`${resp.message} (${resp.ocupantes.join(', ')})`);
-        e.target.reset(); resetBitacoraCedulas(); captureGPS();
+        
+        // LIMPIAR FORMULARIO COMPLETAMENTE TRAS ENVIO
+        document.getElementById('form-bitacora').reset();
+        resetBitacoraCedulas();
+        captureGPS();
       } catch (err) { showAlert(err.message, true); }
     }
 
@@ -1048,3 +1037,4 @@
   </script>
 </body>
 </html>
+
