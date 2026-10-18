@@ -510,20 +510,27 @@
     }
 
     // CAMARA EN PANTALLA COMPLETA
+        // CAMARA EN PANTALLA COMPLETA CORREGIDA
     async function startFullscreenCamera() {
       try {
         const modal = document.getElementById('fullscreen-camera-modal');
         modal.classList.remove('hidden');
         const videoEl = document.getElementById('fullscreen-video');
+        
+        // Forzar uso de la cámara trasera en dispositivos móviles
         activeCameraStream = await navigator.mediaDevices.getUserMedia({ 
-          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 960 } }, 
+          video: { facingMode: { exact: 'environment' }, width: { ideal: 1280 }, height: { ideal: 960 } }, 
           audio: false 
+        }).catch(() => {
+          // Si el dispositivo no soporta 'exact: environment', usa cualquier cámara disponible
+          return navigator.mediaDevices.getUserMedia({ video: true, audio: false });
         });
+
         videoEl.srcObject = activeCameraStream;
         await videoEl.play();
       } catch (err) {
         stopFullscreenCamera();
-        showAlert('No se pudo activar la cámara en pantalla completa. Verifique los permisos del navegador.', true);
+        showAlert('No se pudo activar la cámara. Asegúrese de otorgar permisos de cámara en su navegador o dispositivo.', true);
       }
     }
 
@@ -539,24 +546,47 @@
     function takeFullscreenSnapshot() {
       const v = document.getElementById('fullscreen-video');
       const c = document.getElementById('snapshot-canvas');
-      if (!v.videoWidth || !v.videoHeight) {
+      
+      if (!v || !v.videoWidth || !v.videoHeight) {
         showAlert('La cámara está enfocando, intente de nuevo en un segundo.', true);
         return;
       }
-      const maxW = 900;
+
+      // Redimensionar para optimizar el peso de la imagen base64
+      const maxW = 800;
       const scale = v.videoWidth > maxW ? maxW / v.videoWidth : 1;
       c.width = v.videoWidth * scale; 
       c.height = v.videoHeight * scale;
+      
       const ctx = c.getContext('2d');
       ctx.drawImage(v, 0, 0, c.width, c.height);
 
-      const pngDataUrl = c.toDataURL('image/png');
-      document.getElementById('abs-factura-base64').value = pngDataUrl;
-      document.getElementById('snapshot-preview-img').src = pngDataUrl;
+      // Convertir a formato PNG comprimido
+      const pngDataUrl = c.toDataURL('image/png', 0.85);
+      
+      // Asignar al input oculto de manera estricta
+      const hiddenInput = document.getElementById('abs-factura-base64');
+      if (hiddenInput) {
+        hiddenInput.value = pngDataUrl;
+      }
+      
+      // Mostrar previsualización
+      const previewImg = document.getElementById('snapshot-preview-img');
+      if (previewImg) {
+        previewImg.src = pngDataUrl;
+      }
+
       stopFullscreenCamera();
-      document.getElementById('snapshot-preview-box').classList.remove('hidden');
-      showAlert('¡Fotografía de factura capturada correctamente!');
+      
+      const previewBox = document.getElementById('snapshot-preview-box');
+      if (previewBox) {
+        previewBox.classList.remove('hidden');
+      }
+
+      showAlert('¡Fotografía de factura capturada con éxito!');
     }
+
+
 
     function openInvoiceModal(png, placa, fecha) {
       if (!png) { showAlert('Sin imagen de factura.', true); return; }
