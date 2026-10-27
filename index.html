@@ -786,8 +786,10 @@
         const p = String(r.placa).toUpperCase(), day = r.fecha_hora.substring(0, 10);
         dayCount[`${p}_${day}`] = (dayCount[`${p}_${day}`] || 0) + 1;
         r.tipo_combustible = r.tipo_combustible || vehMap[p] || 'ECO';
-        r.precio_galon = Number(r.precio_galon || getApplicableFuelPrice(r.tipo_combustible, r.fecha_hora)).toFixed(3);
-        r.total_usd = Number(r.total_usd || (Number(r.galones) * Number(r.precio_galon))).toFixed(2);
+        // El precio se toma SIEMPRE de la tabla de vigencias (no del valor guardado en la hoja)
+        const precioVig = getApplicableFuelPrice(r.tipo_combustible, r.fecha_hora);
+        r.precio_galon = precioVig.toFixed(3);
+        r.total_usd = (Number(r.galones) * precioVig).toFixed(2);
 
         if (!byPlaca[p]) byPlaca[p] = [];
         const prev = byPlaca[p];
