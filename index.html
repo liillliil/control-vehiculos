@@ -786,7 +786,7 @@
         const p = String(r.placa).toUpperCase(), day = r.fecha_hora.substring(0, 10);
         dayCount[`${p}_${day}`] = (dayCount[`${p}_${day}`] || 0) + 1;
         r.tipo_combustible = r.tipo_combustible || vehMap[p] || 'ECO';
-        r.precio_galon = Number(r.precio_galon || getApplicableFuelPrice(r.tipo_combustible, r.fecha_hora)).toFixed(2);
+        r.precio_galon = Number(r.precio_galon || getApplicableFuelPrice(r.tipo_combustible, r.fecha_hora)).toFixed(3);
         r.total_usd = Number(r.total_usd || (Number(r.galones) * Number(r.precio_galon))).toFixed(2);
 
         if (!byPlaca[p]) byPlaca[p] = [];
@@ -858,7 +858,7 @@
 
     function renderFuelPricesList() {
       const list = (dashData.precios_combustible && dashData.precios_combustible.length) ? dashData.precios_combustible : DEFAULT_PRICES;
-      document.getElementById('list-fuel-prices').innerHTML = [...list].reverse().map(p => `<div class="flex justify-between px-3 py-2 rounded bg-slate-900 border border-slate-800 text-xs"><span><b>${p.tipo_combustible}:</b> $${Number(p.precio_galon).toFixed(2)}</span><span class="font-mono text-slate-400">${String(p.fecha_vigencia).substring(0, 10)}</span></div>`).join('');
+      document.getElementById('list-fuel-prices').innerHTML = [...list].reverse().map(p => `<div class="flex justify-between px-3 py-2 rounded bg-slate-900 border border-slate-800 text-xs"><span><b>${p.tipo_combustible}:</b> $${Number(p.precio_galon).toFixed(3)}</span><span class="font-mono text-slate-400">${String(p.fecha_vigencia).substring(0, 10)}</span></div>`).join('');
     }
 
     async function handleAddFuelPrice(e) {
@@ -939,7 +939,7 @@
       const list = filterByPlacaAndDate(dashData.abastecimientos, 'filter-abs-placa', 'filter-abs-from', 'filter-abs-to').reverse();
       document.getElementById('table-abastecimientos').innerHTML = list.map(a => {
         const cleanF = formatCleanEcuadorDate(a.fecha_hora), foto = a.foto_base64 || a.factura_base64 || a.foto_factura || '', alert = a._anomalyFlags && a._anomalyFlags.length;
-        return `<tr class="${alert ? 'bg-red-950/30 border-l-4 border-red-500' : 'hover:bg-slate-800/40'}"><td class="p-3 font-mono">${cleanF}</td><td class="p-3">${a.distrito}</td><td class="p-3"><b class="text-amber-300">${a.placa}</b><span class="block text-[10px] text-slate-400">${a.tipo_combustible || 'ECO'}</span></td><td class="p-3">${a.nombre_conductor}</td><td class="p-3 font-bold text-amber-400">${Number(a.galones).toFixed(4)}</td><td class="p-3 font-mono">$${Number(a.precio_galon).toFixed(2)}</td><td class="p-3 font-bold text-emerald-400">$${Number(a.total_usd).toFixed(2)}</td><td class="p-3 font-mono">${a.kilometraje} km</td><td class="p-3 font-mono">${a.recorrido_km > 0 ? a.recorrido_km + ' km' : 'Base Inicial'}</td><td class="p-3">${foto ? `<button onclick="openInvoiceByIndex('${a.id_registro}')" class="px-2 py-1 rounded bg-sky-500/20 text-sky-300 text-xs">Ver Factura</button>` : '-'}</td><td class="p-3 text-right space-x-1"><button onclick="requestRecordAction('ABASTECIMIENTO','${a.id_registro}','EDIT','${a.galones}','${a.kilometraje}')" class="px-2 py-1 rounded bg-amber-500/20 text-amber-300"><i class="fas fa-edit"></i></button><button onclick="requestRecordAction('ABASTECIMIENTO','${a.id_registro}','DELETE')" class="px-2 py-1 rounded bg-red-500/20 text-red-300"><i class="fas fa-trash"></i></button></td></tr>`;
+        return `<tr class="${alert ? 'bg-red-950/30 border-l-4 border-red-500' : 'hover:bg-slate-800/40'}"><td class="p-3 font-mono">${cleanF}</td><td class="p-3">${a.distrito}</td><td class="p-3"><b class="text-amber-300">${a.placa}</b><span class="block text-[10px] text-slate-400">${a.tipo_combustible || 'ECO'}</span></td><td class="p-3">${a.nombre_conductor}</td><td class="p-3 font-bold text-amber-400">${Number(a.galones).toFixed(4)}</td><td class="p-3 font-mono">$${Number(a.precio_galon).toFixed(3)}</td><td class="p-3 font-bold text-emerald-400">$${Number(a.total_usd).toFixed(2)}</td><td class="p-3 font-mono">${a.kilometraje} km</td><td class="p-3 font-mono">${a.recorrido_km > 0 ? a.recorrido_km + ' km' : 'Base Inicial'}</td><td class="p-3">${foto ? `<button onclick="openInvoiceByIndex('${a.id_registro}')" class="px-2 py-1 rounded bg-sky-500/20 text-sky-300 text-xs">Ver Factura</button>` : '-'}</td><td class="p-3 text-right space-x-1"><button onclick="requestRecordAction('ABASTECIMIENTO','${a.id_registro}','EDIT','${a.galones}','${a.kilometraje}')" class="px-2 py-1 rounded bg-amber-500/20 text-amber-300"><i class="fas fa-edit"></i></button><button onclick="requestRecordAction('ABASTECIMIENTO','${a.id_registro}','DELETE')" class="px-2 py-1 rounded bg-red-500/20 text-red-300"><i class="fas fa-trash"></i></button></td></tr>`;
       }).join('') || '<tr><td colspan="11" class="p-4 text-center text-slate-400">Sin registros.</td></tr>';
     }
 
