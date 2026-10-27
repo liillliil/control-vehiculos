@@ -357,7 +357,7 @@
     </main>
   </div>
 
-  <!-- MODAL FACTURA PNG -->
+  <!-- MODAL FACTURA (se ve y se descarga directo desde la web) -->
   <div id="invoice-modal" class="hidden fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4">
     <div class="glass-card max-w-2xl w-full p-5 rounded-2xl border border-slate-700 space-y-4 text-center">
       <div class="flex items-center justify-between border-b border-slate-800 pb-3">
@@ -366,7 +366,7 @@
       </div>
       <div class="bg-slate-950 p-2 rounded-xl border border-slate-800 max-h-[70vh] overflow-auto flex items-center justify-center"><img id="invoice-modal-img" src="" class="max-h-[65vh] w-auto object-contain rounded"></div>
       <div class="flex justify-end gap-3 pt-2">
-        <a id="invoice-download-btn" href="#" download="Factura.png" class="px-4 py-2 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs"><i class="fas fa-download mr-1"></i> Descargar PNG</a>
+        <a id="invoice-download-btn" href="#" download="Factura.png" class="px-4 py-2 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs"><i class="fas fa-download mr-1"></i> Descargar Factura</a>
         <button onclick="closeInvoiceModal()" class="px-4 py-2 rounded-xl bg-slate-800 text-xs text-slate-200">Cerrar</button>
       </div>
     </div>
@@ -387,6 +387,7 @@
     let currentUser = null;
     let dashData = { vehiculos: [], personal: [], abastecimientos: [], bitacora: [], usuarios: [], catalogos: [], precios_combustible: [] };
     let mapInstance = null, trendChartInstance = null, activeCameraStream = null;
+    let invoiceBlobUrl = null;
 
     setInterval(() => { document.getElementById('clockDisplay').innerText = formatCleanEcuadorDate(new Date()); }, 1000);
 
@@ -532,15 +533,15 @@
     }
 
     function stopFullscreenCamera() {
-      if (activeCameraStream) { 
-        activeCameraStream.getTracks().forEach(t => t.stop()); 
-        activeCameraStream = null; 
+      if (activeCameraStream) {
+        activeCameraStream.getTracks().forEach(t => t.stop());
+        activeCameraStream = null;
       }
       const modal = document.getElementById('fullscreen-camera-modal');
       if (modal) modal.classList.add('hidden');
     }
 
-        function takeFullscreenSnapshot() {
+    function takeFullscreenSnapshot() {
       const v = document.getElementById('fullscreen-video');
       const c = document.getElementById('snapshot-canvas');
       if (!v || !v.videoWidth || !v.videoHeight) {
@@ -549,13 +550,13 @@
       }
       const maxW = 900;
       const scale = v.videoWidth > maxW ? maxW / v.videoWidth : 1;
-      c.width = v.videoWidth * scale; 
+      c.width = v.videoWidth * scale;
       c.height = v.videoHeight * scale;
       const ctx = c.getContext('2d');
       ctx.drawImage(v, 0, 0, c.width, c.height);
 
       const pngDataUrl = c.toDataURL('image/png', 0.85);
-      
+
       const hiddenInput = document.getElementById('abs-factura-base64');
       if (hiddenInput) {
         hiddenInput.value = pngDataUrl;
@@ -567,7 +568,7 @@
       }
 
       stopFullscreenCamera();
-      
+
       const previewBox = document.getElementById('snapshot-preview-box');
       if (previewBox) {
         previewBox.classList.remove('hidden');
@@ -576,30 +577,42 @@
       showAlert('¡Fotografía de factura capturada con éxito!');
     }
 
-
-    function openInvoiceModal(png, placa, fecha) {
-      if (!png) { showAlert('Sin imagen de factura.', true); return; }
+    // ===== FACTURA: se pide al backend (GET_FACTURA) y se muestra/descarga desde la web, sin abrir Drive =====
+    function openInvoiceModal(blobUrl, placa, fecha, ext) {
       const cleanF = formatCleanEcuadorDate(fecha);
       document.getElementById('invoice-modal-title').innerText = `Factura ${placa} (${cleanF})`;
       const img = document.getElementById('invoice-modal-img');
-      const esDrive = /^https?:\/\//i.test(png) && /drive\.google\.com/i.test(png);
-      const match = esDrive ? (png.match(/\/d\/([^/]+)/) || png.match(/[?&]id=([^&]+)/)) : null;
       img.style.display = '';
-      img.onerror = () => { img.style.display = 'none'; };
-      img.src = match ? 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(match[1]) + '&sz=w800' : png;
+      img.src = blobUrl;
       const dl = document.getElementById('invoice-download-btn');
-      dl.href = png;
-      if (esDrive) {
-        dl.removeAttribute('download'); dl.target = '_blank'; dl.rel = 'noopener noreferrer';
-        dl.textContent = 'Abrir factura en Drive';
-      } else {
-        dl.download = `Factura_${placa}_${cleanF.replace(/[: ]/g, '_')}.png`;
-        dl.textContent = 'Descargar factura';
-      }
+      dl.href = blobUrl;
+      dl.removeAttribute('target');
+      dl.download = `Factura_${placa}_${cleanF.replace(/[: ]/g, '_')}.${ext || 'png'}`;
+      dl.innerHTML = '<i class="fas fa-download mr-1"></i> Descargar Factura';
       document.getElementById('invoice-modal').classList.remove('hidden');
     }
 
-    function closeInvoiceModal() { document.getElementById('invoice-modal').classList.add('hidden'); }
+    function closeInvoiceModal() {
+      document.getElementById('invoice-modal').classList.add('hidden');
+      document.getElementById('invoice-modal-img').removeAttribute('src');
+      if (invoiceBlobUrl) { URL.revokeObjectURL(invoiceBlobUrl); invoiceBlobUrl = null; }
+    }
+
+    async function openInvoiceByIndex(idReg) {
+      const r = dashData.abastecimientos.find(x => x.id_registro === idReg);
+      if (!r) return;
+      try {
+        const resp = await apiCall('GET_FACTURA', { user: currentUser, id_registro: idReg });
+        const bytes = Uint8Array.from(atob(resp.base64), c => c.charCodeAt(0));
+        const blob = new Blob([bytes], { type: resp.mime });
+        if (invoiceBlobUrl) URL.revokeObjectURL(invoiceBlobUrl);
+        invoiceBlobUrl = URL.createObjectURL(blob);
+        const ext = resp.mime.includes('jpeg') ? 'jpg' : resp.mime.includes('webp') ? 'webp' : 'png';
+        openInvoiceModal(invoiceBlobUrl, r.placa, r.fecha_hora, ext);
+      } catch (err) {
+        showAlert(err.message || 'No se pudo cargar la factura.', true);
+      }
+    }
 
     function addBitacoraCedulaInput(val = '') {
       const c = document.getElementById('bit-cedulas-container');
@@ -640,7 +653,7 @@
       );
     }
 
-          async function handleAbastecimientoSubmit(e) {
+    async function handleAbastecimientoSubmit(e) {
       e.preventDefault();
       const form = document.getElementById('form-abastecimiento');
       const fotoInput = document.getElementById('abs-factura-base64');
@@ -679,8 +692,6 @@
       }
     }
 
-
-
     async function handleBitacoraSubmit(e) {
       e.preventDefault();
       const lat = document.getElementById('bit-lat').value, lng = document.getElementById('bit-lng').value;
@@ -697,7 +708,7 @@
         };
         const resp = await apiCall('SUBMIT_BITACORA', { data });
         showAlert(`${resp.message} (${resp.ocupantes.join(', ')})`);
-        
+
         // LIMPIAR FORMULARIO COMPLETAMENTE TRAS ENVIO
         document.getElementById('form-bitacora').reset();
         resetBitacoraCedulas();
@@ -760,7 +771,7 @@
     }
 
     function recalculateAllFuelRecordsClient() {
-      const vehMap = {}; 
+      const vehMap = {};
       const vehKmBase = {};
       (dashData.vehiculos || []).forEach(v => {
         vehMap[String(v.placa).toUpperCase()] = v.tipo_combustible || 'ECO';
@@ -777,7 +788,7 @@
         r.tipo_combustible = r.tipo_combustible || vehMap[p] || 'ECO';
         r.precio_galon = Number(r.precio_galon || getApplicableFuelPrice(r.tipo_combustible, r.fecha_hora)).toFixed(2);
         r.total_usd = Number(r.total_usd || (Number(r.galones) * Number(r.precio_galon))).toFixed(2);
-        
+
         if (!byPlaca[p]) byPlaca[p] = [];
         const prev = byPlaca[p];
         if (prev.length === 0) {
@@ -809,8 +820,21 @@
       else banner.classList.add('hidden');
     }
 
+    // Convierte filas {precio_eco, precio_super, precio_diesel} en una fila por tipo de combustible
+    function flattenPrecios(rows) {
+      const out = [];
+      (rows || []).forEach(p => {
+        const f = String(p.fecha_vigencia).substring(0, 10);
+        [['ECO', p.precio_eco], ['SUPER', p.precio_super], ['DIESEL', p.precio_diesel]].forEach(([t, v]) => {
+          if (v !== '' && v != null) out.push({ id_precio: p.id_precio, tipo_combustible: t, precio_galon: Number(v), fecha_vigencia: f });
+        });
+      });
+      return out.sort((a, b) => a.fecha_vigencia.localeCompare(b.fecha_vigencia));
+    }
+
     async function refreshDashboardData() {
       dashData = await apiCall('GET_DASHBOARD_DATA', { user: currentUser });
+      dashData.precios_combustible = flattenPrecios(dashData.precios);
       if (dashData.catalogos) {
         publicData.distritos = [...new Set([...dashData.catalogos.filter(c => c.tipo === 'DISTRITO').map(c => c.valor), ...dashData.vehiculos.map(v => v.distrito).filter(Boolean)])];
         publicData.grados = dashData.catalogos.filter(c => c.tipo === 'GRADO').map(c => c.valor);
@@ -839,9 +863,17 @@
 
     async function handleAddFuelPrice(e) {
       e.preventDefault();
+      const form = e.target;
       try {
-        const resp = await apiCall('ADD_FUEL_PRICE', { user: currentUser, tipo_combustible: document.getElementById('price-tipo').value, precio_galon: document.getElementById('price-valor').value, fecha_vigencia: document.getElementById('price-fecha').value });
-        showAlert(resp.message || 'Precio actualizado y recalculado.'); e.target.reset(); await refreshDashboardData();
+        const resp = await apiCall('ADD_FUEL_PRICE', {
+          user: currentUser,
+          tipo_combustible: document.getElementById('price-tipo').value,
+          precio_galon: document.getElementById('price-valor').value,
+          fecha_vigencia: document.getElementById('price-fecha').value
+        });
+        showAlert(resp.message || 'Precio actualizado y recalculado.');
+        form.reset();
+        await refreshDashboardData();
       } catch (err) { showAlert(err.message, true); }
     }
 
@@ -909,11 +941,6 @@
         const cleanF = formatCleanEcuadorDate(a.fecha_hora), foto = a.foto_base64 || a.factura_base64 || a.foto_factura || '', alert = a._anomalyFlags && a._anomalyFlags.length;
         return `<tr class="${alert ? 'bg-red-950/30 border-l-4 border-red-500' : 'hover:bg-slate-800/40'}"><td class="p-3 font-mono">${cleanF}</td><td class="p-3">${a.distrito}</td><td class="p-3"><b class="text-amber-300">${a.placa}</b><span class="block text-[10px] text-slate-400">${a.tipo_combustible || 'ECO'}</span></td><td class="p-3">${a.nombre_conductor}</td><td class="p-3 font-bold text-amber-400">${Number(a.galones).toFixed(4)}</td><td class="p-3 font-mono">$${Number(a.precio_galon).toFixed(2)}</td><td class="p-3 font-bold text-emerald-400">$${Number(a.total_usd).toFixed(2)}</td><td class="p-3 font-mono">${a.kilometraje} km</td><td class="p-3 font-mono">${a.recorrido_km > 0 ? a.recorrido_km + ' km' : 'Base Inicial'}</td><td class="p-3">${foto ? `<button onclick="openInvoiceByIndex('${a.id_registro}')" class="px-2 py-1 rounded bg-sky-500/20 text-sky-300 text-xs">Ver Factura</button>` : '-'}</td><td class="p-3 text-right space-x-1"><button onclick="requestRecordAction('ABASTECIMIENTO','${a.id_registro}','EDIT','${a.galones}','${a.kilometraje}')" class="px-2 py-1 rounded bg-amber-500/20 text-amber-300"><i class="fas fa-edit"></i></button><button onclick="requestRecordAction('ABASTECIMIENTO','${a.id_registro}','DELETE')" class="px-2 py-1 rounded bg-red-500/20 text-red-300"><i class="fas fa-trash"></i></button></td></tr>`;
       }).join('') || '<tr><td colspan="11" class="p-4 text-center text-slate-400">Sin registros.</td></tr>';
-    }
-
-    function openInvoiceByIndex(idReg) {
-      const r = dashData.abastecimientos.find(x => x.id_registro === idReg);
-      if (r) openInvoiceModal(r.foto_base64 || r.factura_base64 || r.foto_factura, r.placa, r.fecha_hora);
     }
 
     async function requestRecordAction(tipoTabla, idRegistro, operation, v1 = '', v2 = '', v3 = '') {
@@ -997,7 +1024,7 @@
     }
 
     function downloadCSVFile(name, rows) {
-      const csv = '\uFEFF' + rows.map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(';')).join('\n');
+      const csv = '﻿' + rows.map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(';')).join('\n');
       const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' })); a.download = name; a.click();
     }
 
@@ -1034,13 +1061,13 @@
 
     async function handleSaveVehiculo(e) {
       e.preventDefault();
-      const vehiculo = { 
-        placa: document.getElementById('veh-placa').value, 
-        distrito: document.getElementById('veh-distrito').value, 
-        tipo_combustible: document.getElementById('veh-combustible').value, 
+      const vehiculo = {
+        placa: document.getElementById('veh-placa').value,
+        distrito: document.getElementById('veh-distrito').value,
+        tipo_combustible: document.getElementById('veh-combustible').value,
         kilometraje_inicial: document.getElementById('veh-km-inicial').value,
         km_inicial: document.getElementById('veh-km-inicial').value,
-        marca_modelo: document.getElementById('veh-modelo').value 
+        marca_modelo: document.getElementById('veh-modelo').value
       };
       const personal = Array.from(document.querySelectorAll('.personal-item')).map(el => ({ cedula: el.querySelector('.p-cedula').value, grado_designacion: el.querySelector('.p-grado').value, nombres: el.querySelector('.p-nombres').value, funcion: el.querySelector('.p-funcion').value }));
       try { const resp = await apiCall('SAVE_VEHICULO', { vehiculo, personal }); showAlert(resp.message); e.target.reset(); document.getElementById('personal-rows-container').innerHTML = ''; addPersonalRow(); await refreshDashboardData(); }
@@ -1087,8 +1114,6 @@
       new QRCode(document.getElementById('qr-abastecimiento'), { text: u1, width: 180, height: 180 });
       new QRCode(document.getElementById('qr-bitacora'), { text: u2, width: 180, height: 180 });
     }
-
-
   </script>
 </body>
 </html>
