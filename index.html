@@ -48,6 +48,14 @@
       50% { transform: translateY(-28px); animation-timing-function: cubic-bezier(0, 0, 0.2, 1); }
     }
     @keyframes jd-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+
+    /* Botellas 3D de contratos */
+    .bottle-wrap { transition: transform .7s ease; transform-style: preserve-3d; filter: drop-shadow(0 14px 16px rgba(0,0,0,.5)); cursor: pointer; }
+    .bottle-wrap:hover { transform: perspective(700px) rotateY(24deg) rotateX(-5deg); }
+    .bottle-svg { animation: bottle-float 4.5s ease-in-out infinite; overflow: visible; }
+    @keyframes bottle-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+    .ctr-bar { height: 6px; border-radius: 9999px; background: rgba(148,163,184,.25); overflow: hidden; }
+    .ctr-bar > i { display: block; height: 100%; border-radius: 9999px; }
   </style>
 </head>
 <body class="flex flex-col min-h-screen">
@@ -114,6 +122,7 @@
               <button onclick="showSection('sec-dash-analitica')" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg hover:bg-sky-500/20 text-left text-sm"><i class="fas fa-chart-line text-rose-400 w-5"></i><span>Analítica, PDF y Reportes</span></button>
               <button onclick="showSection('sec-dash-mapa')" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg hover:bg-sky-500/20 text-left text-sm"><i class="fas fa-map-marked-alt text-emerald-400 w-5"></i><span>Mapa de Operaciones GPS</span></button>
               <button id="menu-catalogos-btn" onclick="showSection('sec-dash-catalogos')" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg hover:bg-sky-500/20 text-left text-sm"><i class="fas fa-folder-tree text-cyan-400 w-5"></i><span>Catálogo y Precios Comb.</span></button>
+              <button id="menu-contratos-btn" onclick="showSection('sec-dash-contratos')" class="hidden w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg hover:bg-sky-500/20 text-left text-sm"><i class="fas fa-droplet text-amber-400 w-5"></i><span>Contratos de Combustible</span></button>
               <button onclick="showSection('sec-dash-vehiculos')" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg hover:bg-sky-500/20 text-left text-sm"><i class="fas fa-car-side text-indigo-400 w-5"></i><span>Flota Vehicular y Personal</span></button>
               <button onclick="showSection('sec-dash-usuarios')" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg hover:bg-sky-500/20 text-left text-sm"><i class="fas fa-users-cog text-purple-400 w-5"></i><span>Usuarios y Autorizaciones</span></button>
               <button onclick="showSection('sec-dash-qrs')" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg hover:bg-sky-500/20 text-left text-sm"><i class="fas fa-qrcode text-pink-400 w-5"></i><span>Códigos QR Oficiales</span></button>
@@ -125,6 +134,13 @@
     </aside>
 
     <main class="flex-1 p-4 md:p-8 overflow-y-auto pb-16">
+      <!-- FILTRO GLOBAL POR DISTRITO (solo SuperAdmin, pantallas de datos) -->
+      <div id="district-filter-bar" class="hidden mb-6 glass-card px-4 py-3 rounded-2xl flex flex-wrap items-center gap-3 border border-sky-500/30">
+        <span class="text-xs font-bold uppercase tracking-wider text-sky-300"><i class="fas fa-filter mr-1"></i> Distrito</span>
+        <select id="global-distrito-filter" onchange="setFiltroDistrito(this.value)" class="bg-slate-900 border border-sky-500/50 rounded-lg px-3 py-1.5 text-sm font-semibold text-white"></select>
+        <span id="district-filter-summary" class="text-xs text-slate-400"></span>
+      </div>
+
       <div id="alertBox" class="hidden mb-6 p-4 rounded-xl border text-sm font-medium flex items-center justify-between">
         <span id="alertMessage"></span>
         <button onclick="document.getElementById('alertBox').classList.add('hidden')" class="ml-4 text-lg">&times;</button>
@@ -323,6 +339,20 @@
         </div>
       </section>
 
+      <!-- 8b. CONTRATOS DE COMBUSTIBLE (SOLO SUPERADMIN) -->
+      <section id="sec-dash-contratos" class="view-section hidden space-y-6">
+        <div class="glass-card p-5 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h2 class="text-xl font-bold"><i class="fas fa-droplet text-amber-400 mr-2"></i>Contratos de Combustible</h2>
+            <p class="text-xs text-slate-400 mt-1 max-w-3xl">Cada botella muestra lo que <b class="text-slate-200">queda</b> del contrato. La línea amarilla punteada es el nivel que <b class="text-amber-300">debería quedar hoy</b> si se consumiera de forma equitativa hasta el fin de la vigencia: líquido por debajo de la línea = se está consumiendo más rápido de lo debido.</p>
+          </div>
+          <button onclick="openContratoModal('')" class="shrink-0 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs"><i class="fas fa-plus mr-1"></i> Nuevo Contrato</button>
+        </div>
+        <div id="contratos-summary" class="grid grid-cols-2 md:grid-cols-4 gap-3"></div>
+        <div id="contratos-sin-contrato" class="hidden glass-card p-4 rounded-2xl border border-amber-500/40 text-xs text-amber-200"></div>
+        <div id="contratos-grid" class="grid grid-cols-1 xl:grid-cols-2 gap-5"></div>
+      </section>
+
       <!-- 9. VEHICULOS (CON KILOMETRAJE INICIAL BASE) -->
       <section id="sec-dash-vehiculos" class="view-section hidden grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div class="glass-card p-5 rounded-2xl space-y-4">
@@ -338,6 +368,7 @@
               <input type="number" id="veh-km-inicial" required placeholder="Ej: 84000" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs font-mono">
             </div>
             <div><label class="block text-xs text-slate-300 mb-1">Marca / Modelo</label><input type="text" id="veh-modelo" required placeholder="Ej: Kia Sportage" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs"></div>
+            <div id="veh-contrato-box" class="hidden"><label class="block text-xs text-amber-300 mb-1">Contrato de combustible</label><select id="veh-contrato" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs"><option value="">Automático (según distrito)</option></select></div>
             <div class="pt-2 border-t border-slate-700">
               <div class="flex items-center justify-between mb-2"><span class="text-xs font-bold text-sky-400">Personal Asignado</span><button type="button" onclick="addPersonalRow()" class="px-2 py-1 rounded bg-slate-800 text-[11px] text-sky-400">+ Añadir Persona</button></div>
               <div id="personal-rows-container" class="space-y-2 max-h-64 overflow-y-auto"></div>
@@ -376,6 +407,39 @@
         <div class="glass-card p-6 rounded-2xl text-center space-y-4"><h3 class="text-lg font-bold text-emerald-400">QR 2: Bitácora (GPS)</h3><div id="qr-bitacora" class="bg-white p-4 rounded-xl inline-block mx-auto"></div><p id="url-bit-text" class="text-[11px] font-mono text-slate-400 break-all"></p></div>
       </section>
     </main>
+  </div>
+
+  <!-- MODAL CONTRATO (crear / editar y asignar unidades) -->
+  <div id="contrato-modal" class="hidden fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4">
+    <form onsubmit="saveContratoForm(event)" class="glass-card max-w-3xl w-full max-h-[92vh] overflow-y-auto p-5 rounded-2xl border border-slate-700 space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 id="ctr-modal-title" class="text-sm font-bold text-amber-400 uppercase">Contrato</h3>
+        <button type="button" onclick="closeContratoModal()" class="text-slate-400 hover:text-white text-xl">&times;</button>
+      </div>
+      <input type="hidden" id="ctr-id">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div class="md:col-span-2"><label class="block text-xs text-slate-300 mb-1">Nombre del contrato</label><input type="text" id="ctr-nombre" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs uppercase"></div>
+        <div><label class="block text-xs text-slate-300 mb-1">Tipo</label><select id="ctr-tipo" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs"><option value="INFIMA">ÍNFIMA CUANTÍA</option><option value="PLURIANUAL">PLURIANUAL</option></select></div>
+        <div><label class="block text-xs text-slate-300 mb-1">Valor del contrato (USD)</label><input type="number" step="0.01" min="0.01" id="ctr-valor" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs font-mono"></div>
+        <div><label class="block text-xs text-slate-300 mb-1">Consumo acumulado a la fecha de corte (USD)</label><input type="number" step="0.01" min="0" id="ctr-base" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs font-mono"></div>
+        <div><label class="block text-xs text-slate-300 mb-1">Fecha de corte (desde aquí suma el sistema)</label><input type="date" id="ctr-corte" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs"></div>
+        <div><label class="block text-xs text-slate-300 mb-1">Inicio de vigencia</label><input type="date" id="ctr-inicio" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs"></div>
+        <div><label class="block text-xs text-slate-300 mb-1">Fin de vigencia</label><input type="date" id="ctr-fin" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs"></div>
+        <div class="md:col-span-2"><label class="block text-xs text-slate-300 mb-1">Distrito que consume de este contrato por defecto <span class="text-slate-500">(las unidades de ese distrito sin contrato propio)</span></label><select id="ctr-distrito" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs"></select></div>
+      </div>
+      <div class="space-y-2">
+        <div class="flex items-center justify-between gap-3">
+          <label class="text-xs font-bold text-sky-400">Unidades que consumen de este contrato</label>
+          <input type="text" id="ctr-buscar" oninput="filtrarUnidadesContrato()" placeholder="Buscar placa..." class="w-40 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs uppercase">
+        </div>
+        <p class="text-[11px] text-slate-400">Marcar una unidad la asigna a este contrato (si estaba en otro, se mueve). Las marcadas como <b>auto</b> entran por el distrito.</p>
+        <div id="ctr-unidades" class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-56 overflow-y-auto p-2 rounded-xl bg-slate-950/60 border border-slate-800"></div>
+      </div>
+      <div class="flex justify-end gap-3 pt-2 border-t border-slate-800">
+        <button type="button" onclick="closeContratoModal()" class="px-4 py-2 rounded-xl bg-slate-800 text-xs text-slate-200">Cancelar</button>
+        <button type="submit" class="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs">Guardar Contrato</button>
+      </div>
+    </form>
   </div>
 
   <!-- MODAL FACTURA (se ve y se descarga directo desde la web) -->
@@ -461,12 +525,15 @@
     }
 
     function showSection(id) {
+      if (id === 'sec-dash-contratos' && !(currentUser && currentUser.rol === 'SUPERADMIN')) return; // solo SuperAdmin
       document.querySelectorAll('.view-section').forEach(s => s.classList.add('hidden'));
       document.getElementById(id).classList.remove('hidden');
       if (id !== 'sec-abastecimiento') stopFullscreenCamera();
       if (id === 'sec-bitacora-form') captureGPS();
       if (id === 'sec-dash-mapa') setTimeout(renderMap, 250);
       if (id === 'sec-dash-analitica') setTimeout(renderFuelTrendChart, 200);
+      if (id === 'sec-dash-contratos') renderContratos();
+      updateDistrictFilterBar(id);
       if (window.innerWidth < 768) document.getElementById('sidebar').classList.add('-translate-x-full');
     }
 
@@ -792,6 +859,8 @@
       document.getElementById('superadmin-auth-box').classList.toggle('hidden', !isSuper);
       document.getElementById('opt-superadmin').classList.toggle('hidden', !isSuper);
       document.getElementById('menu-catalogos-btn').classList.toggle('hidden', !isSuper);
+      document.getElementById('menu-contratos-btn').classList.toggle('hidden', !isSuper);
+      document.getElementById('veh-contrato-box').classList.toggle('hidden', !isSuper);
       await refreshDashboardData();
       populateAllDistritoSelectors();
       if (!isPersistent) showSection('sec-dash-bitacora');
@@ -799,6 +868,8 @@
 
     function logout() {
       currentUser = null;
+      filtroDistrito = '';
+      dashAll = null;
       localStorage.removeItem('jd_fleet_user');
       document.getElementById('admin-protected-links').classList.add('hidden');
       document.getElementById('menu-login-btn').classList.remove('hidden');
@@ -809,7 +880,8 @@
 
     function getApplicableFuelPrice(tipo, fechaStr) {
       const t = String(tipo || 'ECO').toUpperCase(), f = formatCleanEcuadorDate(fechaStr).substring(0, 10) || '2026-01-01';
-      const prices = (dashData.precios_combustible && dashData.precios_combustible.length) ? [...DEFAULT_PRICES, ...dashData.precios_combustible] : DEFAULT_PRICES;
+      // Los precios reales van primero para que ganen a los valores por defecto si comparten fecha
+      const prices = (dashData.precios_combustible && dashData.precios_combustible.length) ? [...dashData.precios_combustible, ...DEFAULT_PRICES] : DEFAULT_PRICES;
       const m = prices.filter(p => String(p.tipo_combustible).toUpperCase() === t && String(p.fecha_vigencia).substring(0, 10) <= f)
                       .sort((a, b) => String(b.fecha_vigencia).localeCompare(String(a.fecha_vigencia)));
       return m.length ? Number(m[0].precio_galon) : (t === 'SUPER' ? 5.42 : t === 'DIESEL' ? 3.11 : 3.17);
@@ -879,14 +951,43 @@
       return out.sort((a, b) => a.fecha_vigencia.localeCompare(b.fecha_vigencia));
     }
 
+    // dashAll = datos completos que devuelve el servidor; dashData = vista filtrada por distrito
+    // (todas las pantallas leen dashData, así el filtro aplica a historial, flota, analítica, mapa, PDF y CSV).
+    let dashAll = null;
+    let filtroDistrito = '';
+
     async function refreshDashboardData() {
-      dashData = await apiCall('GET_DASHBOARD_DATA', { user: currentUser });
-      dashData.precios_combustible = flattenPrecios(dashData.precios);
-      if (dashData.catalogos) {
-        publicData.distritos = [...new Set([...dashData.catalogos.filter(c => c.tipo === 'DISTRITO').map(c => c.valor), ...dashData.vehiculos.map(v => v.distrito).filter(Boolean)])];
-        publicData.grados = dashData.catalogos.filter(c => c.tipo === 'GRADO').map(c => c.valor);
-        populateAllDistritoSelectors(); refreshGradoSelectsInDOM(); renderCatalogosLists();
+      dashAll = await apiCall('GET_DASHBOARD_DATA', { user: currentUser });
+      dashAll.precios_combustible = flattenPrecios(dashAll.precios);
+      if (dashAll.catalogos) {
+        publicData.distritos = [...new Set([...dashAll.catalogos.filter(c => c.tipo === 'DISTRITO').map(c => c.valor), ...dashAll.vehiculos.map(v => v.distrito).filter(Boolean)])];
+        publicData.grados = dashAll.catalogos.filter(c => c.tipo === 'GRADO').map(c => c.valor);
+        populateAllDistritoSelectors(); refreshGradoSelectsInDOM();
       }
+      populateGlobalDistritoFilter();
+      renderDashboardViews();
+    }
+
+    // Construye dashData a partir de dashAll aplicando el distrito elegido (por unidades/placas del distrito)
+    function applyDistritoFilter() {
+      const all = dashAll || { vehiculos: [], personal: [], abastecimientos: [], bitacora: [], usuarios: [], catalogos: [], precios: [], alertas: [], precios_combustible: [] };
+      if (!filtroDistrito) { dashData = { ...all, abastecimientos: (all.abastecimientos || []).map(r => ({ ...r })) }; return; }
+      const vehiculos = (all.vehiculos || []).filter(v => String(v.distrito) === filtroDistrito);
+      const placas = new Set(vehiculos.map(v => String(v.placa).trim().toUpperCase()));
+      const enDistrito = r => placas.has(String(r.placa).trim().toUpperCase());
+      dashData = {
+        ...all,
+        vehiculos,
+        personal: (all.personal || []).filter(enDistrito),
+        abastecimientos: (all.abastecimientos || []).filter(enDistrito).map(r => ({ ...r })),
+        bitacora: (all.bitacora || []).filter(enDistrito),
+        alertas: (all.alertas || []).filter(a => String(a.distrito) === filtroDistrito || enDistrito(a))
+      };
+    }
+
+    function renderDashboardViews() {
+      applyDistritoFilter();
+      renderCatalogosLists();
       recalculateAllFuelRecordsClient();
       populateAnalyticsSelectors();
       renderBitacoraTimeline();
@@ -895,6 +996,39 @@
       renderVehiculosList();
       renderFuelPricesList();
       renderFuelTrendChart();
+      populateContratoSelect();
+      renderContratos();
+      const mapa = document.getElementById('sec-dash-mapa');
+      if (mapa && !mapa.classList.contains('hidden')) renderMap();
+      updateDistrictSummary();
+    }
+
+    function setFiltroDistrito(valor) {
+      filtroDistrito = valor || '';
+      renderDashboardViews();
+    }
+
+    function populateGlobalDistritoFilter() {
+      const sel = document.getElementById('global-distrito-filter');
+      if (!sel) return;
+      const distritos = [...new Set((dashAll.vehiculos || []).map(v => v.distrito).filter(Boolean))].sort();
+      sel.innerHTML = '<option value="">TODOS LOS DISTRITOS</option>' + distritos.map(d => `<option value="${d}">${d}</option>`).join('');
+      if (!distritos.includes(filtroDistrito)) filtroDistrito = '';
+      sel.value = filtroDistrito;
+    }
+
+    function updateDistrictSummary() {
+      const el = document.getElementById('district-filter-summary');
+      if (!el) return;
+      el.innerText = `${dashData.vehiculos.length} unidades · ${dashData.abastecimientos.length} abastecimientos · ${dashData.bitacora.length} salidas de bitácora`;
+    }
+
+    // La barra solo la ve el SuperAdmin y únicamente en pantallas de datos (no catálogos, usuarios ni QR)
+    function updateDistrictFilterBar(sectionId) {
+      const bar = document.getElementById('district-filter-bar');
+      if (!bar) return;
+      const aplica = ['sec-dash-bitacora', 'sec-dash-abastecimiento', 'sec-dash-analitica', 'sec-dash-mapa', 'sec-dash-vehiculos'].includes(sectionId);
+      bar.classList.toggle('hidden', !(currentUser && currentUser.rol === 'SUPERADMIN' && aplica));
     }
 
     function renderCatalogosLists() {
@@ -1117,7 +1251,9 @@
         marca_modelo: document.getElementById('veh-modelo').value
       };
       const personal = Array.from(document.querySelectorAll('.personal-item')).map(el => ({ cedula: el.querySelector('.p-cedula').value, grado_designacion: el.querySelector('.p-grado').value, nombres: el.querySelector('.p-nombres').value, funcion: el.querySelector('.p-funcion').value }));
-      try { const resp = await apiCall('SAVE_VEHICULO', { vehiculo, personal }); showAlert(resp.message); e.target.reset(); document.getElementById('personal-rows-container').innerHTML = ''; addPersonalRow(); await refreshDashboardData(); }
+      // Solo el SuperAdmin envía el contrato; para los demás se conserva el que ya tenga la unidad.
+      if (currentUser && currentUser.rol === 'SUPERADMIN') vehiculo.id_contrato = document.getElementById('veh-contrato').value;
+      try { const resp = await apiCall('SAVE_VEHICULO', { vehiculo, personal, user: currentUser }); showAlert(resp.message); e.target.reset(); document.getElementById('personal-rows-container').innerHTML = ''; addPersonalRow(); await refreshDashboardData(); }
       catch (err) { showAlert(err.message, true); }
     }
 
@@ -1125,7 +1261,7 @@
       document.getElementById('vehiculos-list').innerHTML = dashData.vehiculos.map(v => {
         const trip = dashData.personal.filter(p => String(p.placa).toUpperCase() === String(v.placa).toUpperCase());
         const kmBase = kilometrajeVigente(v) ?? 'No definido';
-        return `<div class="p-4 rounded-xl bg-slate-900/90 border border-slate-700 flex flex-col justify-between"><div><div class="flex justify-between border-b border-slate-800 pb-2 mb-2"><span class="font-bold text-sm text-indigo-400">${v.placa} <span class="text-amber-400 text-xs">[${v.tipo_combustible || 'ECO'}]</span></span><span class="text-[11px] px-2 py-0.5 rounded bg-slate-800">${v.distrito}</span></div><p class="text-xs text-slate-300 mb-1">${v.marca_modelo}</p><p class="text-[11px] text-emerald-400 mb-2 font-mono">Kilometraje vigente: ${kmBase} km</p><div class="space-y-1 text-[11px] text-slate-400">${trip.map(t => `<div>• <b>${t.funcion}:</b>${t.grado_designacion} ${t.nombres} (${t.cedula})</div>`).join('')}</div></div><div class="mt-4 pt-2 border-t border-slate-800 flex justify-end gap-2 text-xs"><button onclick='loadVehiculoForEdit(${JSON.stringify(v)}, ${JSON.stringify(trip)})' class="px-2.5 py-1 rounded bg-sky-500/20 text-sky-300">Editar</button><button onclick="handleDeleteVehiculo('${v.placa}')" class="px-2.5 py-1 rounded bg-red-500/20 text-red-300">Eliminar</button></div></div>`;
+        return `<div class="p-4 rounded-xl bg-slate-900/90 border border-slate-700 flex flex-col justify-between"><div><div class="flex justify-between border-b border-slate-800 pb-2 mb-2"><span class="font-bold text-sm text-indigo-400">${v.placa} <span class="text-amber-400 text-xs">[${v.tipo_combustible || 'ECO'}]</span></span><span class="text-[11px] px-2 py-0.5 rounded bg-slate-800">${v.distrito}</span></div><p class="text-xs text-slate-300 mb-1">${v.marca_modelo}</p>${(currentUser && currentUser.rol === 'SUPERADMIN') ? `<p class="text-[11px] text-amber-300 mb-1"><i class="fas fa-droplet mr-1"></i>${(() => { const k = contratoDeVehiculo(v, (dashAll && dashAll.contratos) || []); return k ? k.nombre + (String(v.id_contrato) === k.id_contrato ? '' : ' (auto)') : '<span class="text-red-300">Sin contrato asignado</span>'; })()}</p>` : ''}<p class="text-[11px] text-emerald-400 mb-2 font-mono">Kilometraje vigente: ${kmBase} km</p><div class="space-y-1 text-[11px] text-slate-400">${trip.map(t => `<div>• <b>${t.funcion}:</b>${t.grado_designacion} ${t.nombres} (${t.cedula})</div>`).join('')}</div></div><div class="mt-4 pt-2 border-t border-slate-800 flex justify-end gap-2 text-xs"><button onclick='loadVehiculoForEdit(${JSON.stringify(v)}, ${JSON.stringify(trip)})' class="px-2.5 py-1 rounded bg-sky-500/20 text-sky-300">Editar</button><button onclick="handleDeleteVehiculo('${v.placa}')" class="px-2.5 py-1 rounded bg-red-500/20 text-red-300">Eliminar</button></div></div>`;
       }).join('') || '<p class="text-xs text-slate-400">Sin vehículos.</p>';
     }
 
@@ -1135,6 +1271,7 @@
       document.getElementById('veh-combustible').value = v.tipo_combustible || 'ECO';
       document.getElementById('veh-km-inicial').value = kilometrajeVigente(v);
       document.getElementById('veh-modelo').value = v.marca_modelo;
+      document.getElementById('veh-contrato').value = v.id_contrato || '';
       document.getElementById('personal-rows-container').innerHTML = '';
       trip.forEach(t => addPersonalRow(t.cedula, t.nombres, t.grado_designacion, t.funcion));
     }
@@ -1152,6 +1289,296 @@
       const rol = document.getElementById('usr-rol').value, dist = document.getElementById('usr-distrito').value;
       try { const resp = await apiCall('CREATE_USER', { adminUser: currentUser, newUser: { email: document.getElementById('usr-email').value, nombre: document.getElementById('usr-nombre').value, rol, distrito: rol === 'SUPERADMIN' ? 'TODOS' : dist } }); showAlert(resp.message); e.target.reset(); }
       catch (err) { showAlert(err.message, true); }
+    }
+
+    // =====================================================================================
+    //  CONTRATOS DE COMBUSTIBLE (solo SuperAdmin)
+    //  - Dinero: valor del contrato − (consumo acumulado a la fecha de corte + lo registrado en el sistema desde el corte).
+    //  - Galones: el contrato no trae precio; se convierte al PRECIO VIGENTE (por fecha de vigencia) con la mezcla de
+    //    combustibles de sus unidades. Los registros del sistema usan el precio vigente a la fecha de cada abastecimiento.
+    //  - Ritmo equitativo: consumo lineal entre inicio y fin de vigencia.
+    // =====================================================================================
+    const DAY_MS = 86400000;
+    const ESTADO_COLOR = {
+      'EXCESO':   { main: '#f97316', light: '#fdba74', dark: '#9a3412', txt: 'text-orange-300', badge: 'bg-orange-500/20 text-orange-300 border-orange-500/50', label: 'CONSUMO ACELERADO' },
+      'EN RITMO': { main: '#22c55e', light: '#86efac', dark: '#166534', txt: 'text-emerald-300', badge: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50', label: 'EN RITMO' },
+      'BAJO':     { main: '#0ea5e9', light: '#7dd3fc', dark: '#075985', txt: 'text-sky-300', badge: 'bg-sky-500/20 text-sky-300 border-sky-500/50', label: 'CONSUMO BAJO (SOBRA SALDO)' },
+      'AGOTADO':  { main: '#ef4444', light: '#fca5a5', dark: '#7f1d1d', txt: 'text-red-300', badge: 'bg-red-500/20 text-red-300 border-red-500/60', label: 'SALDO AGOTADO' },
+      'VENCIDO':  { main: '#64748b', light: '#cbd5e1', dark: '#334155', txt: 'text-slate-300', badge: 'bg-slate-500/20 text-slate-300 border-slate-500/50', label: 'VIGENCIA TERMINADA' }
+    };
+
+    const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+    const cMoney = n => '$' + Number(n || 0).toLocaleString('es-EC', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const cGal = n => Number(n || 0).toLocaleString('es-EC', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    const cPct = n => (Number(n || 0) * 100).toFixed(1) + '%';
+    const ymdToUTC = s => { const [y, m, d] = String(s).substring(0, 10).split('-').map(Number); return Date.UTC(y, m - 1, d); };
+    const diffDays = (a, b) => Math.round((ymdToUTC(b) - ymdToUTC(a)) / DAY_MS);
+    const addDays = (s, n) => new Date(ymdToUTC(s) + n * DAY_MS).toISOString().substring(0, 10);
+    const fmtFecha = s => { const [y, m, d] = String(s).substring(0, 10).split('-'); return `${d}/${m}/${y}`; };
+    const hoyEC = () => formatCleanEcuadorDate(new Date()).substring(0, 10);
+
+    // Contrato al que pertenece una unidad: el asignado explícitamente o, si no, el del distrito
+    function contratoDeVehiculo(v, contratos) {
+      const explicito = v.id_contrato ? contratos.find(c => c.id_contrato === v.id_contrato) : null;
+      if (explicito) return explicito;
+      const d = String(v.distrito || '').trim().toUpperCase();
+      return contratos.find(c => c.distrito && String(c.distrito).trim().toUpperCase() === d) || null;
+    }
+
+    function computeContratos(hoy) {
+      const all = dashAll || {};
+      const contratos = all.contratos || [];
+      const vehs = all.vehiculos || [];
+      const porPlaca = {};
+      vehs.forEach(v => { porPlaca[String(v.placa).trim().toUpperCase()] = v; });
+
+      return contratos.map(c => {
+        const unidades = vehs.filter(v => { const k = contratoDeVehiculo(v, contratos); return k && k.id_contrato === c.id_contrato; });
+        const placas = new Set(unidades.map(v => String(v.placa).trim().toUpperCase()));
+        const valor = Number(c.valor) || 0, base = Number(c.consumo_base) || 0;
+        const inicio = c.fecha_inicio, fin = c.fecha_fin, corte = c.fecha_corte;
+
+        // Consumo registrado en el sistema DESPUÉS de la fecha de corte (precio vigente a la fecha de cada abastecimiento)
+        let usdSis = 0, galSis = 0, nRegs = 0;
+        const galPorTipo = { ECO: 0, SUPER: 0, DIESEL: 0 };
+        (all.abastecimientos || []).forEach(r => {
+          const p = String(r.placa).trim().toUpperCase();
+          if (!placas.has(p)) return;
+          const tipo = String(r.tipo_combustible || (porPlaca[p] && porPlaca[p].tipo_combustible) || 'ECO').toUpperCase();
+          const g = Number(r.galones) || 0;
+          galPorTipo[tipo] = (galPorTipo[tipo] || 0) + g;
+          const f = formatCleanEcuadorDate(r.fecha_hora).substring(0, 10);
+          if (f > corte) { usdSis += g * getApplicableFuelPrice(tipo, f); galSis += g; nRegs++; }
+        });
+
+        // Precio de referencia de hoy según la mezcla de combustibles del contrato
+        let w = { ...galPorTipo }, tot = Object.values(w).reduce((a, b) => a + b, 0);
+        if (!tot) { w = { ECO: 0, SUPER: 0, DIESEL: 0 }; unidades.forEach(v => { const t = String(v.tipo_combustible || 'ECO').toUpperCase(); w[t] = (w[t] || 0) + 1; }); tot = Object.values(w).reduce((a, b) => a + b, 0); }
+        const precioRef = tot ? Object.keys(w).reduce((s, t) => s + (w[t] / tot) * getApplicableFuelPrice(t, hoy), 0) : getApplicableFuelPrice('DIESEL', hoy);
+
+        const totalDias = Math.max(1, diffDays(inicio, fin));
+        const transc = Math.min(totalDias, Math.max(0, diffDays(inicio, hoy)));
+        const restantes = Math.max(0, diffDays(hoy, fin));
+        const consumoUsd = base + usdSis;
+        const saldoUsd = valor - consumoUsd;
+        const pctCons = valor ? consumoUsd / valor : 0;
+        const pctEsp = transc / totalDias;
+        const desv = pctCons - pctEsp;
+
+        const galTotal = precioRef ? valor / precioRef : 0;
+        const galSaldo = precioRef ? saldoUsd / precioRef : 0;
+        const galCons = galTotal - galSaldo;
+
+        const ritmoDia = transc > 0 ? consumoUsd / transc : 0;
+        const diasAlcanza = ritmoDia > 0 ? Math.floor(Math.max(0, saldoUsd) / ritmoDia) : Infinity;
+        const recDia = restantes > 0 ? Math.max(0, saldoUsd) / restantes : 0;
+
+        let estado;
+        if (hoy > fin) estado = 'VENCIDO';
+        else if (saldoUsd <= valor * 0.01) estado = 'AGOTADO';
+        else if (desv > 0.05) estado = 'EXCESO';
+        else if (desv < -0.15) estado = 'BAJO';
+        else estado = 'EN RITMO';
+
+        return { c, unidades, hoy, inicio, fin, corte, valor, base, usdSis, galSis, nRegs, precioRef, totalDias, transc, restantes,
+                 consumoUsd, saldoUsd, pctCons, pctEsp, desv, galTotal, galSaldo, galCons, ritmoDia, diasAlcanza, recDia, estado };
+      });
+    }
+
+    function proyeccionTexto(k) {
+      if (k.estado === 'VENCIDO') return `Vigencia terminada el ${fmtFecha(k.fin)}. Saldo sin ejecutar: ${cMoney(k.saldoUsd)}.`;
+      if (k.estado === 'AGOTADO') return k.saldoUsd < 0
+        ? `Saldo agotado: el consumo superó el valor del contrato por ${cMoney(-k.saldoUsd)} y aún faltan ${k.restantes} días de vigencia.`
+        : `Saldo agotado: quedan solo ${cMoney(k.saldoUsd)} para ${k.restantes} días de vigencia. No hay presupuesto para seguir abasteciendo.`;
+      if (!isFinite(k.diasAlcanza)) return 'Aún no hay consumo suficiente para proyectar.';
+      const dif = k.diasAlcanza - k.restantes;
+      if (dif < 0) return `Al ritmo actual el saldo se agota el ${fmtFecha(addDays(k.hoy, k.diasAlcanza))}, ${-dif} días antes del fin de la vigencia.`;
+      return `Al ritmo actual alcanza hasta el fin de la vigencia y sobrarían ≈ ${cMoney(k.saldoUsd - k.ritmoDia * k.restantes)}.`;
+    }
+
+    // Botella con efecto 3D (cristal, cuerpo cilíndrico, superficie elíptica del líquido y línea del nivel ideal)
+    function bottleSVG(k, i) {
+      const id = 'bt' + i, col = ESTADO_COLOR[k.estado];
+      const top = 84, bot = 238, h = bot - top;
+      const rem = Math.max(0, Math.min(1, k.valor ? k.saldoUsd / k.valor : 0));
+      const exp = Math.max(0, Math.min(1, 1 - k.pctEsp));
+      const yL = bot - h * rem, yE = bot - h * exp;
+      const body = 'M64 30 L96 30 L96 54 C96 68 130 66 130 90 L130 224 C130 236 106 244 80 244 C54 244 30 236 30 224 L30 90 C30 66 64 68 64 54 Z';
+      return `<svg viewBox="0 0 160 270" class="bottle-svg w-full" role="img" aria-label="${esc(k.c.nombre)}: queda ${Math.round(rem * 100)}% del contrato">
+        <defs>
+          <linearGradient id="lq${id}" x1="0" x2="1" y1="0" y2="0">
+            <stop offset="0" stop-color="${col.dark}"/><stop offset=".3" stop-color="${col.main}"/><stop offset=".55" stop-color="${col.light}"/><stop offset="1" stop-color="${col.dark}"/>
+          </linearGradient>
+          <linearGradient id="gl${id}" x1="0" x2="1" y1="0" y2="0">
+            <stop offset="0" stop-color="#fff" stop-opacity=".30"/><stop offset=".18" stop-color="#fff" stop-opacity=".05"/><stop offset=".8" stop-color="#fff" stop-opacity=".02"/><stop offset="1" stop-color="#fff" stop-opacity=".25"/>
+          </linearGradient>
+          <clipPath id="cp${id}"><path d="${body}"/></clipPath>
+        </defs>
+        <ellipse cx="80" cy="258" rx="56" ry="8" fill="#000" opacity=".4"/>
+        <path d="${body}" fill="rgba(148,163,184,.10)"/>
+        <g clip-path="url(#cp${id})">
+          <rect x="20" y="${yL.toFixed(1)}" width="120" height="${(bot + 14 - yL).toFixed(1)}" fill="url(#lq${id})"/>
+          ${rem > 0.004 ? `<ellipse cx="80" cy="${yL.toFixed(1)}" rx="52" ry="8" fill="${col.light}"><animate attributeName="ry" values="7;9.5;7" dur="3.2s" repeatCount="indefinite"/></ellipse>
+          <ellipse cx="80" cy="${yL.toFixed(1)}" rx="52" ry="8" fill="none" stroke="#fff" stroke-opacity=".4"/>
+          <circle cx="62" cy="${(bot - 8).toFixed(1)}" r="3" fill="#fff" fill-opacity=".45"><animate attributeName="cy" values="${(bot - 8).toFixed(1)};${(yL + 6).toFixed(1)}" dur="4s" repeatCount="indefinite"/></circle>
+          <circle cx="98" cy="${(bot - 20).toFixed(1)}" r="2.2" fill="#fff" fill-opacity=".4"><animate attributeName="cy" values="${(bot - 20).toFixed(1)};${(yL + 6).toFixed(1)}" dur="5.3s" repeatCount="indefinite"/></circle>` : ''}
+        </g>
+        <path d="M41 98 L41 218" stroke="#fff" stroke-opacity=".38" stroke-width="6" stroke-linecap="round"/>
+        <path d="${body}" fill="url(#gl${id})" stroke="rgba(226,232,240,.65)" stroke-width="2"/>
+        <line x1="22" x2="138" y1="${yE.toFixed(1)}" y2="${yE.toFixed(1)}" stroke="#fbbf24" stroke-width="2.2" stroke-dasharray="6 4"/>
+        <polygon points="138,${(yE - 6).toFixed(1)} 150,${yE.toFixed(1)} 138,${(yE + 6).toFixed(1)}" fill="#fbbf24"/>
+        <rect x="62" y="14" width="36" height="17" rx="4" fill="#334155" stroke="#94a3b8"/>
+        <text x="80" y="170" text-anchor="middle" font-size="27" font-weight="800" fill="#fff" stroke="rgba(0,0,0,.55)" stroke-width="3.2" paint-order="stroke">${Math.round(rem * 100)}%</text>
+        <text x="80" y="187" text-anchor="middle" font-size="9" font-weight="700" fill="#e2e8f0" stroke="rgba(0,0,0,.55)" stroke-width="2.4" paint-order="stroke" letter-spacing="1.5">QUEDA</text>
+      </svg>`;
+    }
+
+    function contratoCardHTML(k, i) {
+      const col = ESTADO_COLOR[k.estado], c = k.c;
+      const sinUni = k.unidades.length === 0;
+      return `<div class="glass-card rounded-2xl p-4 border ${k.estado === 'EXCESO' || k.estado === 'AGOTADO' ? 'border-red-500/40' : 'border-slate-700/80'}">
+        <div class="flex items-start justify-between gap-2 mb-3">
+          <div>
+            <h3 class="text-base font-bold text-white">${esc(c.nombre)}</h3>
+            <span class="inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-bold ${c.tipo === 'PLURIANUAL' ? 'bg-indigo-500/20 text-indigo-300' : 'bg-teal-500/20 text-teal-300'}">${c.tipo === 'PLURIANUAL' ? 'PLURIANUAL' : 'ÍNFIMA CUANTÍA'}</span>
+            <span class="text-[11px] text-slate-400 ml-1">${k.unidades.length} unidades</span>
+          </div>
+          <span class="px-2.5 py-1 rounded-lg border text-[10px] font-bold text-center ${col.badge}">${col.label}</span>
+        </div>
+        <div class="flex flex-col sm:flex-row gap-4">
+          <div class="bottle-wrap w-36 shrink-0 mx-auto sm:mx-0" onclick="openContratoModal('${esc(c.id_contrato)}')" title="Clic para ver o editar el contrato">${bottleSVG(k, i)}
+            <p class="text-center text-[10px] text-amber-300 mt-1">— — nivel ideal hoy: ${Math.round((1 - k.pctEsp) * 100)}%</p>
+          </div>
+          <div class="flex-1 text-xs space-y-3">
+            <table class="w-full text-left">
+              <thead><tr class="text-[10px] uppercase text-slate-400 border-b border-slate-700"><th class="py-1"></th><th class="py-1 text-right">Dinero (USD)</th><th class="py-1 text-right">Galones*</th></tr></thead>
+              <tbody class="divide-y divide-slate-800">
+                <tr><td class="py-1 text-slate-300">Contrato</td><td class="py-1 text-right font-mono">${cMoney(k.valor)}</td><td class="py-1 text-right font-mono">${cGal(k.galTotal)}</td></tr>
+                <tr><td class="py-1 text-slate-300">Consumido</td><td class="py-1 text-right font-mono text-orange-300">${cMoney(k.consumoUsd)}</td><td class="py-1 text-right font-mono text-orange-300">${cGal(k.galCons)}</td></tr>
+                <tr><td class="py-1 font-bold ${col.txt}">Saldo</td><td class="py-1 text-right font-mono font-bold ${col.txt}">${cMoney(k.saldoUsd)}</td><td class="py-1 text-right font-mono font-bold ${col.txt}">${cGal(k.galSaldo)}</td></tr>
+                <tr><td class="py-1 text-slate-400">Recomendado por día</td><td class="py-1 text-right font-mono text-slate-300">${cMoney(k.recDia)}</td><td class="py-1 text-right font-mono text-slate-300">${cGal(k.precioRef ? k.recDia / k.precioRef : 0)}</td></tr>
+              </tbody>
+            </table>
+            <div class="space-y-1.5">
+              <div><div class="flex justify-between text-[11px]"><span class="text-slate-400">Tiempo transcurrido</span><b>${cPct(k.pctEsp)}</b></div><div class="ctr-bar"><i style="width:${Math.min(100, k.pctEsp * 100)}%;background:#fbbf24"></i></div></div>
+              <div><div class="flex justify-between text-[11px]"><span class="text-slate-400">Dinero consumido</span><b class="${col.txt}">${cPct(k.pctCons)}</b></div><div class="ctr-bar"><i style="width:${Math.min(100, Math.max(0, k.pctCons * 100))}%;background:${col.main}"></i></div></div>
+              <p class="text-[11px] text-slate-400">Va <b class="${col.txt}">${Math.abs(k.desv * 100).toFixed(1)} puntos ${k.desv > 0 ? 'por encima' : 'por debajo'}</b> del consumo equitativo.</p>
+            </div>
+            <p class="text-[11px] text-slate-300 bg-slate-900/70 border border-slate-800 rounded-lg p-2"><i class="fas fa-chart-line text-amber-300 mr-1"></i>${proyeccionTexto(k)}</p>
+            <p class="text-[10px] text-slate-500">Vigencia: ${fmtFecha(k.inicio)} → ${fmtFecha(k.fin)} · quedan <b class="text-slate-300">${k.restantes}</b> días.<br>
+              Desde el corte (${fmtFecha(k.corte)}) el sistema registra <b class="text-slate-300">${cMoney(k.usdSis)}</b> y <b class="text-slate-300">${cGal(k.galSis)} gal</b> reales en ${k.nRegs} abastecimientos.<br>
+              *Galones equivalentes al precio vigente de hoy: <b class="text-slate-300">$${k.precioRef.toFixed(3)}/gal</b> (según la mezcla de combustibles de sus unidades).</p>
+            ${sinUni ? '<p class="text-[11px] text-amber-300"><i class="fas fa-triangle-exclamation mr-1"></i>Sin unidades asignadas: asígnelas en "Ver / Editar" para sumar consumo de este contrato.</p>' : ''}
+          </div>
+        </div>
+        <div class="mt-3 pt-2 border-t border-slate-800 flex justify-end"><button onclick="openContratoModal('${esc(c.id_contrato)}')" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-[11px] text-sky-300"><i class="fas fa-pen mr-1"></i> Ver / Editar contrato y unidades</button></div>
+      </div>`;
+    }
+
+    function renderContratos() {
+      const grid = document.getElementById('contratos-grid');
+      if (!grid) return;
+      if (!(currentUser && currentUser.rol === 'SUPERADMIN') || !dashAll) { grid.innerHTML = ''; return; }
+      const hoy = hoyEC();
+      const lista = computeContratos(hoy);
+
+      const tot = lista.reduce((a, k) => ({ valor: a.valor + k.valor, cons: a.cons + k.consumoUsd, saldo: a.saldo + k.saldoUsd, galSaldo: a.galSaldo + k.galSaldo, riesgo: a.riesgo + (k.estado === 'EXCESO' || k.estado === 'AGOTADO' ? 1 : 0) }), { valor: 0, cons: 0, saldo: 0, galSaldo: 0, riesgo: 0 });
+      const tile = (t, v, sub, cls = 'text-white') => `<div class="glass-card p-3 rounded-xl"><p class="text-[10px] uppercase text-slate-400">${t}</p><p class="text-lg font-bold font-mono ${cls}">${v}</p><p class="text-[10px] text-slate-500">${sub}</p></div>`;
+      document.getElementById('contratos-summary').innerHTML =
+        tile('Valor total contratos', cMoney(tot.valor), `${lista.length} contratos`) +
+        tile('Consumido', cMoney(tot.cons), cPct(tot.valor ? tot.cons / tot.valor : 0) + ' del total', 'text-orange-300') +
+        tile('Saldo disponible', cMoney(tot.saldo), `≈ ${cGal(tot.galSaldo)} galones`, 'text-emerald-300') +
+        tile('Contratos en riesgo', String(tot.riesgo), 'consumo acelerado o agotados', tot.riesgo ? 'text-red-300' : 'text-emerald-300');
+
+      // Unidades que no consumen de ningún contrato
+      const contratos = dashAll.contratos || [];
+      const sin = (dashAll.vehiculos || []).filter(v => !contratoDeVehiculo(v, contratos));
+      const box = document.getElementById('contratos-sin-contrato');
+      if (sin.length) {
+        box.classList.remove('hidden');
+        box.innerHTML = `<i class="fas fa-triangle-exclamation mr-1"></i><b>${sin.length} unidades no están asignadas a ningún contrato</b> y su consumo no se descuenta de ninguno: ${sin.slice(0, 15).map(v => esc(v.placa) + ' (' + esc(v.distrito) + ')').join(', ')}${sin.length > 15 ? '…' : ''}. Asígnelas desde "Ver / Editar" del contrato correspondiente o en la pestaña Flota.`;
+      } else box.classList.add('hidden');
+
+      grid.innerHTML = lista.length ? lista.map(contratoCardHTML).join('') : '<p class="text-xs text-slate-400">No hay contratos registrados. Use "Nuevo Contrato".</p>';
+    }
+
+    function populateContratoSelect() {
+      const sel = document.getElementById('veh-contrato');
+      if (!sel) return;
+      const prev = sel.value;
+      const contratos = (dashAll && dashAll.contratos) || [];
+      sel.innerHTML = '<option value="">Automático (según distrito)</option>' + contratos.map(c => `<option value="${esc(c.id_contrato)}">${esc(c.nombre)}</option>`).join('');
+      sel.value = contratos.some(c => c.id_contrato === prev) ? prev : '';
+    }
+
+    // ---------- Modal de contrato ----------
+    function openContratoModal(id) {
+      const contratos = (dashAll && dashAll.contratos) || [];
+      const c = id ? contratos.find(x => x.id_contrato === id) : null;
+      const hoy = hoyEC();
+      document.getElementById('ctr-modal-title').innerText = c ? 'Contrato: ' + c.nombre : 'Nuevo contrato de combustible';
+      document.getElementById('ctr-id').value = c ? c.id_contrato : '';
+      document.getElementById('ctr-nombre').value = c ? c.nombre : '';
+      document.getElementById('ctr-tipo').value = c ? c.tipo : 'INFIMA';
+      document.getElementById('ctr-valor').value = c ? c.valor : '';
+      document.getElementById('ctr-base').value = c ? c.consumo_base : 0;
+      document.getElementById('ctr-corte').value = c ? c.fecha_corte : hoy;
+      document.getElementById('ctr-inicio').value = c ? c.fecha_inicio : hoy;
+      document.getElementById('ctr-fin').value = c ? c.fecha_fin : '';
+      const dSel = document.getElementById('ctr-distrito');
+      const distritos = [...new Set((dashAll.vehiculos || []).map(v => v.distrito).filter(Boolean))].sort();
+      dSel.innerHTML = '<option value="">Ninguno (solo unidades asignadas a mano)</option>' + distritos.map(d => `<option value="${esc(d)}">${esc(d)}</option>`).join('');
+      dSel.value = c && c.distrito ? String(c.distrito).toUpperCase() : '';
+
+      const lista = [...(dashAll.vehiculos || [])].sort((a, b) => String(a.distrito).localeCompare(String(b.distrito)) || String(a.placa).localeCompare(String(b.placa)));
+      document.getElementById('ctr-unidades').innerHTML = lista.map(v => {
+        const k = contratoDeVehiculo(v, contratos);
+        const explicito = c && String(v.id_contrato) === c.id_contrato;
+        const auto = c && !explicito && k && k.id_contrato === c.id_contrato;
+        const otro = !explicito && !auto && v.id_contrato && contratos.find(x => x.id_contrato === v.id_contrato);
+        return `<label class="ctr-unidad flex items-center gap-2 px-2 py-1 rounded bg-slate-900/80 border border-slate-800 text-[11px] ${auto ? 'opacity-70' : ''}" data-placa="${esc(String(v.placa).toUpperCase())}">
+          <input type="checkbox" class="ctr-placa" value="${esc(v.placa)}" ${explicito || auto ? 'checked' : ''} ${auto ? 'disabled' : ''}>
+          <b class="text-amber-300">${esc(v.placa)}</b><span class="text-slate-400 truncate">${esc(v.distrito)}</span>
+          ${auto ? '<span class="ml-auto text-sky-300">auto</span>' : otro ? `<span class="ml-auto text-slate-500 truncate max-w-[110px]" title="${esc(otro.nombre)}">en ${esc(otro.nombre)}</span>` : ''}
+        </label>`;
+      }).join('') || '<p class="text-xs text-slate-400 p-2">Sin vehículos registrados.</p>';
+      document.getElementById('ctr-buscar').value = '';
+      document.getElementById('contrato-modal').classList.remove('hidden');
+    }
+
+    function closeContratoModal() { document.getElementById('contrato-modal').classList.add('hidden'); }
+
+    function filtrarUnidadesContrato() {
+      const q = document.getElementById('ctr-buscar').value.trim().toUpperCase();
+      document.querySelectorAll('#ctr-unidades .ctr-unidad').forEach(el => { el.style.display = !q || el.dataset.placa.includes(q) ? '' : 'none'; });
+    }
+
+    async function saveContratoForm(e) {
+      e.preventDefault();
+      if (isSubmitting) return;
+      isSubmitting = true;
+      try {
+        const contrato = {
+          id_contrato: document.getElementById('ctr-id').value,
+          nombre: document.getElementById('ctr-nombre').value,
+          tipo: document.getElementById('ctr-tipo').value,
+          valor: document.getElementById('ctr-valor').value,
+          consumo_base: document.getElementById('ctr-base').value,
+          fecha_corte: document.getElementById('ctr-corte').value,
+          fecha_inicio: document.getElementById('ctr-inicio').value,
+          fecha_fin: document.getElementById('ctr-fin').value,
+          distrito: document.getElementById('ctr-distrito').value
+        };
+        const placas = Array.from(document.querySelectorAll('#ctr-unidades .ctr-placa:checked:not(:disabled)')).map(i => i.value);
+        const resp = await apiCall('SAVE_CONTRATO', { user: currentUser, contrato, placas });
+        showAlert(resp.message);
+        closeContratoModal();
+        await refreshDashboardData();
+      } catch (err) {
+        showAlert(err.message, true);
+      } finally {
+        isSubmitting = false;
+      }
     }
 
     function generateQRCodes() {
