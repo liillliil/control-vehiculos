@@ -26,16 +26,37 @@
       font-size: 0.78rem; color: #38bdf8; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.5);
     }
     #map { height: 460px; width: 100%; border-radius: 0.75rem; z-index: 10; }
+
+    /* Indicador de carga JD (CSS propio: no depende de Tailwind) */
+    #global-loading-overlay {
+      display: none; position: fixed; inset: 0; z-index: 100000;
+      background: rgba(2, 6, 23, 0.85); backdrop-filter: blur(4px);
+      flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+      text-align: center; padding: 24px; cursor: wait;
+    }
+    #global-loading-overlay.show { display: flex; }
+    .jd-logo {
+      width: 76px; height: 76px; border-radius: 18px; display: flex; align-items: center; justify-content: center;
+      font-size: 30px; font-weight: 800; color: #7dd3fc; background: rgba(14, 165, 233, 0.2);
+      border: 3px solid #38bdf8; box-shadow: 0 10px 30px rgba(56, 189, 248, 0.35);
+      animation: jd-bounce 0.7s infinite;
+    }
+    .jd-title { font-size: 18px; font-weight: 700; color: #7dd3fc; letter-spacing: 0.1em; animation: jd-pulse 1.2s infinite; }
+    .jd-msg { font-size: 12px; color: #cbd5e1; max-width: 280px; }
+    @keyframes jd-bounce {
+      0%, 100% { transform: translateY(0); animation-timing-function: cubic-bezier(0.8, 0, 1, 1); }
+      50% { transform: translateY(-28px); animation-timing-function: cubic-bezier(0, 0, 0.2, 1); }
+    }
+    @keyframes jd-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
   </style>
 </head>
 <body class="flex flex-col min-h-screen">
 
   <!-- OVERLAY DE CARGA GLOBAL CENTRADO (JD - CARGANDO...) -->
-  <div id="global-loading-overlay" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex flex-col items-center justify-center space-y-3">
-    <div class="w-16 h-16 rounded-2xl bg-sky-500/20 border-2 border-sky-400 text-sky-300 font-bold text-2xl flex items-center justify-center shadow-lg shadow-sky-500/30 animate-bounce">
-      JD
-    </div>
-    <p class="text-sm font-semibold text-sky-300 tracking-wider animate-pulse">Cargando...</p>
+  <div id="global-loading-overlay" role="status" aria-live="polite">
+    <div class="jd-logo">JD</div>
+    <p class="jd-title">Cargando...</p>
+    <p id="loading-msg" class="jd-msg">Por favor espere, no cierre ni vuelva a presionar el botón.</p>
   </div>
 
   <!-- MODAL DE CAMARA EN PANTALLA COMPLETA -->
@@ -388,6 +409,7 @@
     let dashData = { vehiculos: [], personal: [], abastecimientos: [], bitacora: [], usuarios: [], catalogos: [], precios_combustible: [] };
     let mapInstance = null, trendChartInstance = null, activeCameraStream = null;
     let invoiceBlobUrl = null;
+    let isSubmitting = false; // evita envíos duplicados de los formularios QR
 
     setInterval(() => { document.getElementById('clockDisplay').innerText = formatCleanEcuadorDate(new Date()); }, 1000);
 
@@ -449,16 +471,25 @@
     }
 
     // INDICADOR DE CARGA GLOBAL CENTRADO (JD - CARGANDO...)
-    function setLoading(isLoading) {
+    // Usa un contador: si hay varias llamadas a la vez, el overlay se oculta cuando terminan todas.
+    let loadingCount = 0;
+    const LOADING_MESSAGES = {
+      SUBMIT_ABASTECIMIENTO: 'Registrando abastecimiento y subiendo la factura. Puede tardar unos segundos; no vuelva a presionar el botón.',
+      SUBMIT_BITACORA: 'Registrando la salida en bitácora. No vuelva a presionar el botón.'
+    };
+    function setLoading(isLoading, msg) {
       const overlay = document.getElementById('global-loading-overlay');
-      if (overlay) {
-        if (isLoading) overlay.classList.remove('hidden');
-        else overlay.classList.add('hidden');
+      if (!overlay) return;
+      loadingCount = Math.max(0, loadingCount + (isLoading ? 1 : -1));
+      if (isLoading && msg) document.getElementById('loading-msg').innerText = msg;
+      overlay.classList.toggle('show', loadingCount > 0);
+      if (loadingCount === 0) {
+        document.getElementById('loading-msg').innerText = 'Por favor espere, no cierre ni vuelva a presionar el botón.';
       }
     }
 
     async function apiCall(action, payload = {}) {
-      setLoading(true);
+      setLoading(true, LOADING_MESSAGES[action]);
       try {
         const res = await fetch(API_URL, {
           method: 'POST',
@@ -664,8 +695,11 @@
         return;
       }
 
+      if (isSubmitting) return; // ya hay un envío en curso: ignorar clics repetidos
+      isSubmitting = true;
       const submitButton = form.querySelector('button[type="submit"]');
-      if (submitButton) submitButton.disabled = true;
+      const submitLabel = submitButton ? submitButton.innerHTML : '';
+      if (submitButton) { submitButton.disabled = true; submitButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Registrando...'; }
 
       try {
         const data = {
@@ -688,7 +722,8 @@
       } catch (err) {
         showAlert(err.message || 'No se pudo registrar el abastecimiento.', true);
       } finally {
-        if (submitButton) submitButton.disabled = false;
+        isSubmitting = false;
+        if (submitButton) { submitButton.disabled = false; submitButton.innerHTML = submitLabel; }
       }
     }
 
@@ -696,8 +731,13 @@
       e.preventDefault();
       const lat = document.getElementById('bit-lat').value, lng = document.getElementById('bit-lng').value;
       if (!lat || !lng) { document.getElementById('gps-strict-lock').classList.remove('hidden'); captureGPS(); return; }
+      if (isSubmitting) return; // ya hay un envío en curso: ignorar clics repetidos
+      isSubmitting = true;
       const cedulas = Array.from(document.querySelectorAll('.bit-cedula-item')).map(i => i.value.trim()).filter(Boolean);
       const cartilla = document.getElementById('bit-cartilla-ecu').value.trim().toUpperCase();
+      const bitButton = document.querySelector('#form-bitacora button[type="submit"]');
+      const bitLabel = bitButton ? bitButton.innerHTML : '';
+      if (bitButton) { bitButton.disabled = true; bitButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Registrando...'; }
       try {
         const data = {
           distrito: document.getElementById('bit-distrito').value,
@@ -713,7 +753,12 @@
         document.getElementById('form-bitacora').reset();
         resetBitacoraCedulas();
         captureGPS();
-      } catch (err) { showAlert(err.message, true); }
+      } catch (err) {
+        showAlert(err.message, true);
+      } finally {
+        isSubmitting = false;
+        if (bitButton) { bitButton.disabled = false; bitButton.innerHTML = bitLabel; }
+      }
     }
 
     async function handleLogin(e) {
