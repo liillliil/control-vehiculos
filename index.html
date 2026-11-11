@@ -425,7 +425,7 @@
         <div><label class="block text-xs text-slate-300 mb-1">Fecha de corte (desde aquí suma el sistema)</label><input type="date" id="ctr-corte" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs"></div>
         <div><label class="block text-xs text-slate-300 mb-1">Inicio de vigencia</label><input type="date" id="ctr-inicio" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs"></div>
         <div><label class="block text-xs text-slate-300 mb-1">Fin de vigencia</label><input type="date" id="ctr-fin" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs"></div>
-        <div class="md:col-span-2"><label class="block text-xs text-slate-300 mb-1">Distrito que consume de este contrato por defecto <span class="text-slate-500">(las unidades de ese distrito sin contrato propio)</span></label><select id="ctr-distrito" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs"></select></div>
+        <div class="md:col-span-2"><label class="block text-xs text-slate-300 mb-1">Distrito / subzona adicional que consume de este contrato <span class="text-slate-500">(opcional: ya entran automáticamente las unidades cuyo distrito coincide con el nombre del contrato)</span></label><select id="ctr-distrito" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs"></select></div>
       </div>
       <div class="space-y-2">
         <div class="flex items-center justify-between gap-3">
@@ -1317,12 +1317,24 @@
     const fmtFecha = s => { const [y, m, d] = String(s).substring(0, 10).split('-'); return `${d}/${m}/${y}`; };
     const hoyEC = () => formatCleanEcuadorDate(new Date()).substring(0, 10);
 
-    // Contrato al que pertenece una unidad: el asignado explícitamente o, si no, el del distrito
+    // Normaliza nombres para comparar: sin tildes, sin las palabras DISTRITO / CIRCUITO / SUBZONA / MOTOS ni espacios.
+    // Así "DISTRITO VENTANAS" = "VENTANAS", "PUEBLO VIEJO" = "PUEBLOVIEJO", "SUBZONA MORINI" = "MOTOS MORINI".
+    const claveZona = s => String(s == null ? '' : s).toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .replace(/\b(DISTRITO|CIRCUITO|SUBZONA|SUB ZONA|MOTOS)\b/g, '').replace(/[^A-Z0-9]/g, '');
+
+    // ¿La unidad pertenece (por el nombre de su distrito/subzona) a este contrato?
+    function coincideZona(v, c) {
+      const vz = claveZona(v.distrito), cz = claveZona(c.nombre), cd = claveZona(c.distrito);
+      if (!vz) return false;
+      if (cz === 'MORINI') return vz.includes('MORINI');
+      return vz === cz || (cd !== '' && vz === cd);
+    }
+
+    // Contrato al que pertenece una unidad: el asignado a mano o, si no, el que coincide con su distrito/subzona
     function contratoDeVehiculo(v, contratos) {
       const explicito = v.id_contrato ? contratos.find(c => c.id_contrato === v.id_contrato) : null;
       if (explicito) return explicito;
-      const d = String(v.distrito || '').trim().toUpperCase();
-      return contratos.find(c => c.distrito && String(c.distrito).trim().toUpperCase() === d) || null;
+      return contratos.find(c => coincideZona(v, c)) || null;
     }
 
     function computeContratos(hoy) {
@@ -1499,7 +1511,13 @@
         box.innerHTML = `<i class="fas fa-triangle-exclamation mr-1"></i><b>${sin.length} unidades no están asignadas a ningún contrato</b> y su consumo no se descuenta de ninguno: ${sin.slice(0, 15).map(v => esc(v.placa) + ' (' + esc(v.distrito) + ')').join(', ')}${sin.length > 15 ? '…' : ''}. Asígnelas desde "Ver / Editar" del contrato correspondiente o en la pestaña Flota.`;
       } else box.classList.add('hidden');
 
-      grid.innerHTML = lista.length ? lista.map(contratoCardHTML).join('') : '<p class="text-xs text-slate-400">No hay contratos registrados. Use "Nuevo Contrato".</p>';
+      let vacio = '<p class="text-xs text-slate-400">No hay contratos registrados. Use "Nuevo Contrato".</p>';
+      if (dashAll.contratos === undefined) {
+        vacio = '<div class="glass-card p-4 rounded-2xl border border-red-500/50 text-xs text-red-200"><b>El servidor no envió los contratos.</b> Apps Script sigue con la versión anterior: pegue el <b>Code.gs</b> nuevo y en <b>Implementar → Administrar implementaciones → Editar → Versión: Nueva versión</b> publique de nuevo.</div>';
+      } else if (!lista.length) {
+        vacio = '<div class="glass-card p-4 rounded-2xl border border-amber-500/50 text-xs text-amber-200"><b>El servidor devolvió 0 contratos.</b> Revise que exista la hoja <b>Contratos</b> con filas y que su correo figure como <b>SUPERADMIN</b> en la hoja Usuarios. También puede crearlos con "Nuevo Contrato".</div>';
+      }
+      grid.innerHTML = lista.length ? lista.map(contratoCardHTML).join('') : vacio;
     }
 
     function populateContratoSelect() {
@@ -1526,8 +1544,9 @@
       document.getElementById('ctr-inicio').value = c ? c.fecha_inicio : hoy;
       document.getElementById('ctr-fin').value = c ? c.fecha_fin : '';
       const dSel = document.getElementById('ctr-distrito');
-      const distritos = [...new Set((dashAll.vehiculos || []).map(v => v.distrito).filter(Boolean))].sort();
-      dSel.innerHTML = '<option value="">Ninguno (solo unidades asignadas a mano)</option>' + distritos.map(d => `<option value="${esc(d)}">${esc(d)}</option>`).join('');
+      const distritos = new Set((dashAll.vehiculos || []).map(v => v.distrito).filter(Boolean));
+      if (c && c.distrito) distritos.add(String(c.distrito).toUpperCase());
+      dSel.innerHTML = '<option value="">Automático (por el nombre del contrato)</option>' + [...distritos].sort().map(d => `<option value="${esc(d)}">${esc(d)}</option>`).join('');
       dSel.value = c && c.distrito ? String(c.distrito).toUpperCase() : '';
 
       const lista = [...(dashAll.vehiculos || [])].sort((a, b) => String(a.distrito).localeCompare(String(b.distrito)) || String(a.placa).localeCompare(String(b.placa)));
