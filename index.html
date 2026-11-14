@@ -56,6 +56,118 @@
     @keyframes bottle-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
     .ctr-bar { height: 6px; border-radius: 9999px; background: rgba(148,163,184,.25); overflow: hidden; }
     .ctr-bar > i { display: block; height: 100%; border-radius: 9999px; }
+
+    /* ===== Modal de alerta (estilo emergencia) ===== */
+    #alert-modal { display: none; position: fixed; inset: 0; z-index: 100500; background: rgba(2,6,23,.82); backdrop-filter: blur(5px); align-items: center; justify-content: center; padding: 16px; }
+    #alert-modal.show { display: flex; }
+    .alm-box { width: min(640px, 100%); max-height: 92vh; overflow: auto; border-radius: 18px; background: linear-gradient(160deg,#1e0a0f,#0f172a 60%); border: 2px solid #ef4444; box-shadow: 0 0 0 4px rgba(239,68,68,.15), 0 0 40px rgba(239,68,68,.45); animation: alm-pop .35s cubic-bezier(.2,1.4,.4,1), alm-glow 1.6s ease-in-out infinite; }
+    .alm-head { display: flex; align-items: center; gap: 14px; padding: 16px 18px; background: repeating-linear-gradient(-45deg,#7f1d1d,#7f1d1d 14px,#991b1b 14px,#991b1b 28px); border-radius: 16px 16px 0 0; }
+    .alm-siren { width: 46px; height: 46px; border-radius: 50%; background: #ef4444; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 22px; animation: alm-blink 1s infinite; flex: none; }
+    .alm-item { border: 1px solid rgba(239,68,68,.45); background: rgba(127,29,29,.22); border-radius: 12px; padding: 12px 14px; margin-top: 12px; }
+    .alm-item h4 { color: #fca5a5; font-weight: 800; font-size: 12px; letter-spacing: .08em; margin-bottom: 6px; }
+    .alm-item p { color: #e2e8f0; font-size: 13px; line-height: 1.6; text-align: justify; }
+    @keyframes alm-pop { from { transform: scale(.85) translateY(20px); opacity: 0; } to { transform: none; opacity: 1; } }
+    @keyframes alm-glow { 0%,100% { box-shadow: 0 0 0 4px rgba(239,68,68,.15), 0 0 28px rgba(239,68,68,.35); } 50% { box-shadow: 0 0 0 6px rgba(239,68,68,.25), 0 0 55px rgba(239,68,68,.6); } }
+    @keyframes alm-blink { 0%,100% { background: #ef4444; } 50% { background: #7f1d1d; } }
+
+    /* ===== Panel del Supervisor (todo en CSS 3D, sin depender de Tailwind) ===== */
+    #sv-app { display: none; position: fixed; inset: 0; z-index: 90000; overflow-x: hidden; overflow-y: auto; color: #e2e8f0; -webkit-overflow-scrolling: touch;
+      background: radial-gradient(1200px 700px at 15% -10%, #0c4a6e 0%, transparent 60%), radial-gradient(900px 600px at 100% 10%, #312e81 0%, transparent 55%), #020617; }
+    #sv-app.show { display: block; }
+    #sv-app * { box-sizing: border-box; }
+    .sv-wrap { max-width: 1240px; margin: 0 auto; padding: clamp(12px, 3vw, 28px); position: relative; z-index: 2; }
+    .sv-floaters { position: fixed; inset: 0; perspective: 900px; pointer-events: none; z-index: 1; overflow: hidden; }
+    .sv-cube { position: absolute; width: var(--s); height: var(--s); transform-style: preserve-3d; animation: sv-spin var(--t) linear infinite; left: var(--x); top: var(--y); opacity: .55; }
+    .sv-cube i { position: absolute; inset: 0; border: 1px solid rgba(56,189,248,.45); background: rgba(14,165,233,.06); }
+    .sv-cube i:nth-child(1) { transform: translateZ(calc(var(--s) / 2)); } .sv-cube i:nth-child(2) { transform: rotateY(180deg) translateZ(calc(var(--s) / 2)); }
+    .sv-cube i:nth-child(3) { transform: rotateY(90deg) translateZ(calc(var(--s) / 2)); } .sv-cube i:nth-child(4) { transform: rotateY(-90deg) translateZ(calc(var(--s) / 2)); }
+    .sv-cube i:nth-child(5) { transform: rotateX(90deg) translateZ(calc(var(--s) / 2)); } .sv-cube i:nth-child(6) { transform: rotateX(-90deg) translateZ(calc(var(--s) / 2)); }
+    @keyframes sv-spin { from { transform: rotateX(0) rotateY(0) translateY(0); } 50% { transform: rotateX(180deg) rotateY(200deg) translateY(30px); } to { transform: rotateX(360deg) rotateY(360deg) translateY(0); } }
+
+    .sv-hero { display: flex; align-items: center; gap: clamp(12px, 3vw, 22px); flex-wrap: wrap; margin-bottom: 18px; }
+    .sv-logo-scene { width: 74px; height: 74px; perspective: 500px; flex: none; }
+    .sv-logo { position: relative; width: 74px; height: 74px; transform-style: preserve-3d; animation: sv-logo-rot 9s linear infinite; }
+    .sv-logo b { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 900; color: #7dd3fc; background: rgba(14,165,233,.22); border: 2px solid #38bdf8; border-radius: 10px; box-shadow: inset 0 0 18px rgba(56,189,248,.4); }
+    .sv-logo b:nth-child(1) { transform: translateZ(37px); } .sv-logo b:nth-child(2) { transform: rotateY(180deg) translateZ(37px); }
+    .sv-logo b:nth-child(3) { transform: rotateY(90deg) translateZ(37px); } .sv-logo b:nth-child(4) { transform: rotateY(-90deg) translateZ(37px); }
+    @keyframes sv-logo-rot { from { transform: rotateX(-18deg) rotateY(0); } to { transform: rotateX(-18deg) rotateY(360deg); } }
+    .sv-title { font-size: clamp(16px, 3.6vw, 26px); font-weight: 900; letter-spacing: .04em; color: #fff; text-transform: uppercase; line-height: 1.15; }
+    .sv-sub { font-size: clamp(11px, 2.4vw, 13px); color: #7dd3fc; margin-top: 2px; }
+    .sv-actions { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+    .sv-btn { cursor: pointer; border: 1px solid rgba(148,163,184,.4); background: rgba(15,23,42,.8); color: #e2e8f0; border-radius: 10px; padding: 8px 14px; font-size: 12px; font-weight: 700; transition: transform .15s, background .15s; }
+    .sv-btn:hover { background: rgba(14,165,233,.25); transform: translateY(-2px); }
+    .sv-btn.pri { background: #0ea5e9; color: #020617; border-color: #38bdf8; }
+    .sv-btn.pri:hover { background: #38bdf8; }
+
+    .sv-tabs { position: relative; display: inline-flex; padding: 4px; border-radius: 14px; background: rgba(15,23,42,.9); border: 1px solid rgba(148,163,184,.3); margin-bottom: 16px; max-width: 100%; }
+    .sv-tabs button { position: relative; z-index: 2; border: 0; background: transparent; color: #94a3b8; font-weight: 800; font-size: clamp(11px, 2.6vw, 13px); padding: 9px clamp(14px, 4vw, 26px); cursor: pointer; border-radius: 10px; transition: color .25s; letter-spacing: .05em; text-transform: uppercase; }
+    .sv-tabs button.on { color: #020617; }
+    .sv-tabs .sv-pill { position: absolute; z-index: 1; top: 4px; bottom: 4px; border-radius: 10px; background: linear-gradient(135deg,#38bdf8,#818cf8); box-shadow: 0 6px 18px rgba(56,189,248,.45); transition: left .35s cubic-bezier(.3,1.3,.5,1), width .35s; }
+    .sv-range { font-size: 11px; color: #94a3b8; margin: -6px 0 14px 2px; }
+
+    .sv-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 165px), 1fr)); gap: clamp(10px, 2vw, 16px); perspective: 1000px; margin-bottom: 20px; }
+    .sv-kpi { position: relative; transform-style: preserve-3d; transition: transform .25s ease-out, box-shadow .25s; border-radius: 16px; padding: 14px 14px 12px; background: linear-gradient(150deg, rgba(30,41,59,.95), rgba(15,23,42,.95)); border: 1px solid rgba(148,163,184,.28); box-shadow: 0 14px 28px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.07); animation: sv-rise .7s both; }
+    .sv-kpi::after { content: ""; position: absolute; left: 12px; right: 12px; bottom: -10px; height: 12px; border-radius: 50%; background: rgba(0,0,0,.55); filter: blur(8px); transform: translateZ(-30px); }
+    .sv-kpi .ic { transform: translateZ(34px); font-size: 20px; width: 38px; height: 38px; border-radius: 11px; display: flex; align-items: center; justify-content: center; margin-bottom: 8px; background: var(--c1); color: #020617; box-shadow: 0 8px 16px rgba(0,0,0,.4); }
+    .sv-kpi .lb { transform: translateZ(18px); font-size: 10px; text-transform: uppercase; letter-spacing: .1em; color: #94a3b8; font-weight: 700; }
+    .sv-kpi .vl { transform: translateZ(42px); font-size: clamp(22px, 5vw, 30px); font-weight: 900; color: #fff; font-family: ui-monospace, monospace; line-height: 1.15; text-shadow: 0 4px 14px rgba(0,0,0,.6); }
+    .sv-kpi .dl { transform: translateZ(14px); font-size: 11px; margin-top: 2px; color: #94a3b8; }
+    .sv-kpi.bad { border-color: rgba(239,68,68,.7); box-shadow: 0 14px 28px rgba(0,0,0,.45), 0 0 26px rgba(239,68,68,.35); }
+    .sv-up { color: #fb923c; } .sv-down { color: #34d399; } .sv-eq { color: #94a3b8; }
+    @keyframes sv-rise { from { opacity: 0; transform: translateY(26px) rotateX(35deg); } to { opacity: 1; } }
+
+    .sv-card { border-radius: 18px; padding: clamp(12px, 2.6vw, 20px); background: linear-gradient(160deg, rgba(15,23,42,.92), rgba(2,6,23,.92)); border: 1px solid rgba(148,163,184,.25); box-shadow: 0 18px 40px rgba(0,0,0,.45); margin-bottom: 20px; }
+    .sv-h2 { font-size: clamp(13px, 3vw, 16px); font-weight: 800; color: #fff; letter-spacing: .06em; text-transform: uppercase; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+    .sv-h2 small { font-weight: 500; text-transform: none; letter-spacing: 0; color: #94a3b8; font-size: 11px; }
+    .sv-seg { display: inline-flex; gap: 4px; margin-left: auto; }
+    .sv-seg button { border: 1px solid rgba(148,163,184,.35); background: rgba(15,23,42,.8); color: #94a3b8; border-radius: 8px; padding: 4px 10px; font-size: 11px; font-weight: 700; cursor: pointer; }
+    .sv-seg button.on { background: #0ea5e9; color: #020617; border-color: #38bdf8; }
+
+    /* gráfico de barras 3D */
+    .sv-chart-scene { perspective: 900px; height: clamp(190px, 34vw, 270px); position: relative; }
+    .sv-chart { position: absolute; inset: 0 2% 22px; display: flex; align-items: flex-end; justify-content: space-around; gap: clamp(2px, .8vw, 8px); transform-style: preserve-3d; transform: rotateX(var(--rx, 22deg)) rotateY(var(--ry, -16deg)); transition: transform .25s ease-out; }
+    .sv-chart::before { content: ""; position: absolute; inset: auto -2% -6px -2%; height: 14px; background: rgba(148,163,184,.16); transform: translateZ(-20px) rotateX(90deg); transform-origin: bottom; }
+    .sv-bar { position: relative; flex: 1; max-width: 40px; height: 100%; display: flex; align-items: flex-end; transform-style: preserve-3d; cursor: pointer; }
+    .sv-bar .p { position: relative; width: 100%; height: 0; transform-style: preserve-3d; transition: height .9s cubic-bezier(.2,1.2,.4,1) var(--d, 0s); }
+    .sv-bar .p > i { position: absolute; display: block; }
+    .sv-bar .f { inset: 0; background: linear-gradient(180deg, var(--c1), var(--c2)); transform: translateZ(8px); }
+    .sv-bar .r { top: 0; bottom: 0; right: -8px; width: 16px; background: var(--c3); transform-origin: left; transform: rotateY(90deg) translateZ(0); }
+    .sv-bar .t { left: 0; right: 0; top: -8px; height: 16px; background: var(--c1); filter: brightness(1.25); transform-origin: bottom; transform: rotateX(90deg) translateZ(0); }
+    .sv-bar.hot .f { --c1: #fca5a5; --c2: #ef4444; } .sv-bar.hot .r { --c3: #7f1d1d; }
+    .sv-bar:hover .p, .sv-bar.sel .p { filter: brightness(1.35); }
+    .sv-bar .x { position: absolute; bottom: -22px; left: 50%; transform: translateX(-50%); font-size: 9px; color: #94a3b8; white-space: nowrap; }
+    .sv-tip { position: absolute; z-index: 5; pointer-events: none; padding: 6px 10px; border-radius: 8px; font-size: 11px; background: #0f172a; border: 1px solid #38bdf8; color: #e2e8f0; display: none; white-space: nowrap; }
+
+    .sv-grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: clamp(12px, 2vw, 18px); }
+    .sv-bottle { border-radius: 16px; padding: 14px; background: rgba(15,23,42,.7); border: 1px solid rgba(148,163,184,.28); perspective: 800px; display: flex; gap: 12px; align-items: center; }
+    .sv-bottle .bt { width: clamp(92px, 26vw, 128px); flex: none; transform-style: preserve-3d; animation: sv-sway 6s ease-in-out infinite; filter: drop-shadow(0 14px 14px rgba(0,0,0,.55)); }
+    @keyframes sv-sway { 0%,100% { transform: rotateY(-22deg) rotateX(3deg); } 50% { transform: rotateY(22deg) rotateX(-2deg); } }
+    .sv-pbar { height: 7px; border-radius: 99px; background: rgba(148,163,184,.25); overflow: hidden; position: relative; }
+    .sv-pbar i { position: absolute; inset: 0 auto 0 0; border-radius: 99px; }
+    .sv-badge { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 10px; font-weight: 800; letter-spacing: .05em; border: 1px solid; }
+
+    .sv-alert { display: flex; gap: 12px; align-items: flex-start; padding: 12px; border-radius: 14px; margin-bottom: 10px; cursor: pointer; background: linear-gradient(120deg, rgba(127,29,29,.42), rgba(15,23,42,.85)); border: 1px solid rgba(239,68,68,.55); transition: transform .2s, box-shadow .2s; animation: sv-rise .5s both; }
+    .sv-alert:hover { transform: translateX(6px) scale(1.01); box-shadow: 0 0 24px rgba(239,68,68,.35); }
+    .sv-alert .si { flex: none; width: 36px; height: 36px; border-radius: 50%; background: #ef4444; color: #fff; display: flex; align-items: center; justify-content: center; animation: alm-blink 1.4s infinite; }
+    .sv-chip { display: inline-block; font-size: 10px; font-weight: 800; padding: 1px 8px; border-radius: 99px; margin: 2px 4px 0 0; background: rgba(239,68,68,.22); color: #fecaca; border: 1px solid rgba(239,68,68,.5); }
+    .sv-empty { text-align: center; padding: 22px 10px; color: #6ee7b7; font-size: 13px; }
+
+    .sv-units { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)); gap: 12px; perspective: 1000px; }
+    .sv-unit { border-radius: 14px; padding: 12px; background: linear-gradient(150deg, rgba(30,41,59,.9), rgba(15,23,42,.95)); border: 1px solid rgba(148,163,184,.25); transition: transform .25s, box-shadow .25s; transform-style: preserve-3d; }
+    .sv-unit:hover { transform: rotateX(4deg) rotateY(-5deg) translateZ(10px); box-shadow: 0 16px 28px rgba(0,0,0,.5); }
+    .sv-unit.al { border-color: rgba(239,68,68,.65); } .sv-unit.no { opacity: .72; }
+    .sv-gauge { position: relative; height: 8px; border-radius: 99px; background: rgba(148,163,184,.22); margin: 10px 0 4px; }
+    .sv-gauge .band { position: absolute; top: 0; bottom: 0; border-radius: 99px; background: rgba(34,197,94,.45); }
+    .sv-gauge .dot { position: absolute; top: -4px; width: 16px; height: 16px; margin-left: -8px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 2px 8px rgba(0,0,0,.6); }
+
+    .sv-login { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 18px; perspective: 1100px; position: relative; z-index: 2; }
+    .sv-login-card { width: min(420px, 100%); border-radius: 22px; padding: clamp(20px, 5vw, 32px); text-align: center; background: linear-gradient(160deg, rgba(30,41,59,.96), rgba(2,6,23,.97)); border: 1px solid rgba(56,189,248,.45); box-shadow: 0 30px 60px rgba(0,0,0,.6), 0 0 50px rgba(56,189,248,.18); transform-style: preserve-3d; transition: transform .2s ease-out; animation: sv-rise .8s both; }
+    .sv-login-card .sv-logo-scene { margin: 0 auto 14px; }
+    .sv-in { width: 100%; text-align: center; letter-spacing: .25em; font-family: ui-monospace, monospace; font-size: 18px; padding: 12px; border-radius: 12px; border: 1px solid #475569; background: #0f172a; color: #fff; outline: none; margin: 6px 0; }
+    .sv-in:focus { border-color: #38bdf8; box-shadow: 0 0 0 3px rgba(56,189,248,.3); }
+    .sv-err { color: #fca5a5; font-size: 12px; min-height: 18px; margin-top: 6px; }
+    @media (max-width: 560px) { .sv-actions { width: 100%; margin-left: 0; } .sv-actions .sv-btn { flex: 1; } .sv-bottle { flex-direction: column; text-align: center; } .sv-seg { margin-left: 0; } }
+    @media (prefers-reduced-motion: reduce) { #sv-app *, #alert-modal * { animation: none !important; transition: none !important; } }
   </style>
 </head>
 <body class="flex flex-col min-h-screen">
@@ -124,7 +236,8 @@
               <button id="menu-catalogos-btn" onclick="showSection('sec-dash-catalogos')" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg hover:bg-sky-500/20 text-left text-sm"><i class="fas fa-folder-tree text-cyan-400 w-5"></i><span>Catálogo y Precios Comb.</span></button>
               <button id="menu-contratos-btn" onclick="showSection('sec-dash-contratos')" class="hidden w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg hover:bg-sky-500/20 text-left text-sm"><i class="fas fa-droplet text-amber-400 w-5"></i><span>Contratos de Combustible</span></button>
               <button onclick="showSection('sec-dash-vehiculos')" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg hover:bg-sky-500/20 text-left text-sm"><i class="fas fa-car-side text-indigo-400 w-5"></i><span>Flota Vehicular y Personal</span></button>
-              <button onclick="showSection('sec-dash-usuarios')" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg hover:bg-sky-500/20 text-left text-sm"><i class="fas fa-users-cog text-purple-400 w-5"></i><span>Usuarios y Autorizaciones</span></button>
+              <button id="menu-usuarios-btn" onclick="showSection('sec-dash-usuarios')" class="hidden w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg hover:bg-sky-500/20 text-left text-sm"><i class="fas fa-users-cog text-purple-400 w-5"></i><span>Usuarios y Autorizaciones</span></button>
+              <button id="menu-supervisores-btn" onclick="showSection('sec-dash-supervisores')" class="hidden w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg hover:bg-sky-500/20 text-left text-sm"><i class="fas fa-user-shield text-cyan-400 w-5"></i><span>Supervisores de Distrito</span></button>
               <button onclick="showSection('sec-dash-qrs')" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg hover:bg-sky-500/20 text-left text-sm"><i class="fas fa-qrcode text-pink-400 w-5"></i><span>Códigos QR Oficiales</span></button>
             </div>
           </nav>
@@ -243,7 +356,7 @@
       <!-- 5. HISTORIAL ABASTECIMIENTOS -->
       <section id="sec-dash-abastecimiento" class="view-section hidden space-y-6">
         <div id="anomalies-banner" class="hidden glass-card p-4 rounded-2xl border border-red-500/50 bg-red-950/30 space-y-2">
-          <h3 class="text-sm font-bold text-red-300"><i class="fas fa-triangle-exclamation text-red-400 mr-1"></i> Alertas Automáticas Detectadas</h3>
+          <h3 class="text-sm font-bold text-red-300"><i class="fas fa-triangle-exclamation text-red-400 mr-1"></i> Alertas detectadas (<span id="anomalies-count">0</span>) <span class="font-normal text-red-200/80">· toque una para ver el detalle</span></h3>
           <div id="anomalies-list" class="space-y-1 text-xs text-red-200 max-h-40 overflow-y-auto"></div>
         </div>
         <div class="glass-card p-5 rounded-2xl flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -401,6 +514,26 @@
         </div>
       </section>
 
+
+      <!-- 10b. SUPERVISORES DE DISTRITO (SOLO SUPERADMIN) -->
+      <section id="sec-dash-supervisores" class="view-section hidden grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <div class="glass-card p-5 rounded-2xl space-y-4 xl:col-span-1">
+          <h3 class="text-lg font-bold text-cyan-400"><i class="fas fa-user-shield mr-2"></i>Nuevo Supervisor de Distrito</h3>
+          <p class="text-[11px] text-slate-400">Al crearlo se genera su enlace personal y se envía un token temporal a su correo. En su primer ingreso deberá cambiarlo.</p>
+          <form onsubmit="handleCreateSupervisor(event)" class="space-y-3">
+            <div><label class="block text-xs text-slate-300 mb-1">Grado y Nombres</label><input type="text" id="sup-nombre" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs"></div>
+            <div><label class="block text-xs text-slate-300 mb-1">Correo Electrónico</label><input type="email" id="sup-email" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs"></div>
+            <div><label class="block text-xs text-slate-300 mb-1">Distrito que supervisa</label><select id="sup-distrito" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs"></select></div>
+            <button type="submit" class="w-full py-2.5 rounded-xl bg-cyan-500 text-slate-950 font-bold text-xs">Crear Supervisor y Generar Enlace</button>
+          </form>
+          <div id="sup-nuevo-link" class="hidden p-4 rounded-xl bg-slate-900 border border-cyan-500/50 space-y-2 text-xs"></div>
+        </div>
+        <div class="glass-card p-5 rounded-2xl xl:col-span-2 space-y-3">
+          <h3 class="text-lg font-bold text-white">Supervisores registrados</h3>
+          <div id="sup-lista" class="space-y-3"></div>
+        </div>
+      </section>
+
       <!-- 11. CODIGOS QR -->
       <section id="sec-dash-qrs" class="view-section hidden grid grid-cols-1 md:grid-cols-2 gap-6">
         <div class="glass-card p-6 rounded-2xl text-center space-y-4"><h3 class="text-lg font-bold text-amber-400">QR 1: Abastecimiento</h3><div id="qr-abastecimiento" class="bg-white p-4 rounded-xl inline-block mx-auto"></div><p id="url-abs-text" class="text-[11px] font-mono text-slate-400 break-all"></p></div>
@@ -459,6 +592,55 @@
 
   <div class="Watermark-dev">Desarrollador: Ing. J.D. Enriquez N.</div>
 
+
+  <!-- Modal de alerta (emergencia) -->
+  <div id="alert-modal" onclick="if(event.target===this)closeAlertaModal()">
+    <div class="alm-box" role="alertdialog" aria-modal="true" aria-labelledby="alm-title">
+      <div class="alm-head">
+        <div class="alm-siren"><i class="fas fa-triangle-exclamation"></i></div>
+        <div style="flex:1;min-width:0">
+          <p style="font-size:10px;letter-spacing:.2em;color:#fecaca;font-weight:800">ALERTA DEL SISTEMA</p>
+          <h3 id="alm-title" style="color:#fff;font-weight:900;font-size:17px;line-height:1.2"></h3>
+        </div>
+        <button onclick="closeAlertaModal()" aria-label="Cerrar" style="color:#fff;font-size:22px;padding:4px 8px;background:none;border:0;cursor:pointer">&times;</button>
+      </div>
+      <div style="padding:6px 18px 18px">
+        <div id="alm-meta" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px"></div>
+        <div id="alm-body"></div>
+        <div style="text-align:right;margin-top:16px"><button onclick="closeAlertaModal()" style="background:#ef4444;color:#fff;font-weight:800;font-size:12px;padding:10px 22px;border-radius:10px;border:0;cursor:pointer">Entendido</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel del Supervisor -->
+  <div id="sv-app">
+    <div class="sv-floaters" aria-hidden="true"></div>
+    <div id="sv-login" class="sv-login" style="display:none">
+      <div class="sv-login-card" id="sv-login-card">
+        <div class="sv-logo-scene"><div class="sv-logo"><b>JD</b><b>JD</b><b>JD</b><b>JD</b></div></div>
+        <h1 class="sv-title" style="font-size:19px">Panel de Supervisión</h1>
+        <p class="sv-sub" style="margin-bottom:16px">Control de abastecimiento de combustible</p>
+        <div id="sv-step-token">
+          <p style="font-size:12px;color:#94a3b8">Ingrese su token de acceso</p>
+          <input id="sv-token" type="password" autocomplete="current-password" class="sv-in" placeholder="••••••••" onkeydown="if(event.key==='Enter')svLogin()">
+          <button class="sv-btn pri" style="width:100%;padding:12px;margin-top:8px" onclick="svLogin()">Ingresar</button>
+        </div>
+        <div id="sv-step-change" style="display:none">
+          <p style="font-size:12px;color:#fbbf24;font-weight:700">Primer ingreso: cree su token personal</p>
+          <p style="font-size:11px;color:#94a3b8;margin-bottom:6px">Mínimo 8 caracteres, con letras y números. Será su única clave de acceso.</p>
+          <input id="sv-new1" type="password" autocomplete="new-password" class="sv-in" placeholder="Nuevo token">
+          <input id="sv-new2" type="password" autocomplete="new-password" class="sv-in" placeholder="Repetir token" onkeydown="if(event.key==='Enter')svChangeToken()">
+          <button class="sv-btn pri" style="width:100%;padding:12px;margin-top:8px" onclick="svChangeToken()">Guardar y entrar</button>
+        </div>
+        <div id="sv-err" class="sv-err"></div>
+      </div>
+    </div>
+    <div id="sv-main" class="sv-wrap" style="display:none"></div>
+    <div id="sv-loading" style="display:none;position:fixed;inset:0;z-index:5;align-items:center;justify-content:center;flex-direction:column;gap:10px;background:rgba(2,6,23,.8)">
+      <div class="jd-logo">JD</div><div class="jd-title">CARGANDO…</div>
+    </div>
+  </div>
+
   <script>
     const API_URL = 'https://script.google.com/macros/s/AKfycbz27sSZ4-73_dSrDcuyYN7O_bYSRJrm1v_ZOMKbnXKPpo4KcJu7K7nnM1eLWTYPWI-XBA/exec';
 
@@ -492,6 +674,9 @@
     }
 
     window.addEventListener('DOMContentLoaded', async () => {
+      // Modo supervisor: el enlace ?sup=ID abre únicamente el panel del supervisor (no carga nada del sistema interno)
+      const supParam = new URLSearchParams(window.location.search).get('sup');
+      if (supParam) { initSupervisorMode(supParam); return; }
       resetBitacoraCedulas();
       generateQRCodes();
       const formTarget = new URLSearchParams(window.location.search).get('form');
@@ -525,7 +710,7 @@
     }
 
     function showSection(id) {
-      if (id === 'sec-dash-contratos' && !(currentUser && currentUser.rol === 'SUPERADMIN')) return; // solo SuperAdmin
+      if (['sec-dash-contratos', 'sec-dash-usuarios', 'sec-dash-supervisores'].includes(id) && !(currentUser && currentUser.rol === 'SUPERADMIN')) return; // solo SuperAdmin
       document.querySelectorAll('.view-section').forEach(s => s.classList.add('hidden'));
       document.getElementById(id).classList.remove('hidden');
       if (id !== 'sec-abastecimiento') stopFullscreenCamera();
@@ -533,6 +718,7 @@
       if (id === 'sec-dash-mapa') setTimeout(renderMap, 250);
       if (id === 'sec-dash-analitica') setTimeout(renderFuelTrendChart, 200);
       if (id === 'sec-dash-contratos') renderContratos();
+      if (id === 'sec-dash-supervisores') renderSupervisores();
       updateDistrictFilterBar(id);
       if (window.innerWidth < 768) document.getElementById('sidebar').classList.add('-translate-x-full');
     }
@@ -828,10 +1014,13 @@
       }
     }
 
+    let tempPassActual = '';
     async function handleLogin(e) {
       e.preventDefault();
       try {
-        currentUser = await apiCall('LOGIN', { email: document.getElementById('login-email').value, password: document.getElementById('login-pass').value });
+        const passIngresada = document.getElementById('login-pass').value;
+        currentUser = await apiCall('LOGIN', { email: document.getElementById('login-email').value, password: passIngresada });
+        tempPassActual = passIngresada;
         if (currentUser.cambio_clave === 'SI') { document.getElementById('box-change-pass').classList.remove('hidden'); return; }
         localStorage.setItem('jd_fleet_user', JSON.stringify(currentUser));
         enterDashboard();
@@ -842,7 +1031,7 @@
       const newPassword = document.getElementById('new-personal-pass').value;
       if (!newPassword || newPassword.length < 5) { showAlert('Mínimo 5 caracteres.', true); return; }
       try {
-        await apiCall('CHANGE_PASSWORD', { email: currentUser.email, newPassword });
+        await apiCall('CHANGE_PASSWORD', { email: currentUser.email, newPassword, currentPassword: tempPassActual });
         document.getElementById('box-change-pass').classList.add('hidden');
         localStorage.setItem('jd_fleet_user', JSON.stringify(currentUser));
         enterDashboard();
@@ -859,6 +1048,8 @@
       document.getElementById('superadmin-auth-box').classList.toggle('hidden', !isSuper);
       document.getElementById('opt-superadmin').classList.toggle('hidden', !isSuper);
       document.getElementById('menu-catalogos-btn').classList.toggle('hidden', !isSuper);
+      document.getElementById('menu-usuarios-btn').classList.toggle('hidden', !isSuper);   // los ADMIN de distrito no crean usuarios
+      document.getElementById('menu-supervisores-btn').classList.toggle('hidden', !isSuper);
       document.getElementById('menu-contratos-btn').classList.toggle('hidden', !isSuper);
       document.getElementById('veh-contrato-box').classList.toggle('hidden', !isSuper);
       await refreshDashboardData();
@@ -895,13 +1086,12 @@
         vehKmBase[String(v.placa).toUpperCase()] = Number(v.kilometraje_inicial || v.km_inicial || 0);
       });
 
-      const byPlaca = {}, dayCount = {}, anomalies = [];
+      const byPlaca = {};
       const sorted = [...(dashData.abastecimientos || [])].sort((a, b) => formatCleanEcuadorDate(a.fecha_hora).localeCompare(formatCleanEcuadorDate(b.fecha_hora)));
 
       sorted.forEach(r => {
         r.fecha_hora = formatCleanEcuadorDate(r.fecha_hora);
         const p = String(r.placa).toUpperCase(), day = r.fecha_hora.substring(0, 10);
-        dayCount[`${p}_${day}`] = (dayCount[`${p}_${day}`] || 0) + 1;
         r.tipo_combustible = r.tipo_combustible || vehMap[p] || 'ECO';
         // El precio se toma SIEMPRE de la tabla de vigencias (no del valor guardado en la hoja)
         const precioVig = getApplicableFuelPrice(r.tipo_combustible, r.fecha_hora);
@@ -919,24 +1109,21 @@
         byPlaca[p].push(r);
       });
 
-      Object.keys(byPlaca).forEach(p => {
-        const list = byPlaca[p], valid = list.filter(x => x.recorrido_km > 0);
-        const avg = valid.length ? valid.reduce((s, x) => s + x.recorrido_km, 0) / valid.length : 0;
-        list.forEach(r => {
-          const day = r.fecha_hora.substring(0, 10), flags = [];
-          if (dayCount[`${p}_${day}`] >= 2) flags.push(`2+ tanqueos el mismo día (${day})`);
-          if (avg > 0 && r.recorrido_km > 0 && (Math.abs(r.recorrido_km - avg) / avg) >= 0.35) {
-            flags.push(`Desviación de recorrido (${r.recorrido_km} km vs prom. ${avg.toFixed(0)} km)`);
-          }
-          r._anomalyFlags = flags;
-          if (flags.length) anomalies.push(`<b>${p} (${r.fecha_hora}):</b> ${flags.join(' | ')}`);
-        });
-      });
-
       dashData.abastecimientos = sorted;
+      // Las alertas las calcula el servidor (doble abastecimiento el mismo día y rendimiento fuera del rango histórico de cada unidad)
+      const mapa = (dashAll && dashAll.alertas_abs) || {};
+      const lista = [];
+      sorted.forEach(r => {
+        r._alerta = mapa[r.id_registro] || null;
+        if (r._alerta) lista.push(r);
+      });
       const banner = document.getElementById('anomalies-banner');
-      if (anomalies.length) { banner.classList.remove('hidden'); document.getElementById('anomalies-list').innerHTML = anomalies.reverse().map(a => `<div>• ${a}</div>`).join(''); }
-      else banner.classList.add('hidden');
+      if (lista.length) {
+        banner.classList.remove('hidden');
+        document.getElementById('anomalies-list').innerHTML = lista.slice().reverse().map(r =>
+          `<button type="button" onclick="openAlertaModal('${esc(r.id_registro)}')" class="block w-full text-left px-2 py-1 rounded hover:bg-red-900/40"><b>${esc(r.placa)}</b> · ${esc(String(r.fecha_hora).substring(0, 16))} · ${r._alerta.mensajes.map(m => esc(m.titulo)).join(' + ')}</button>`).join('');
+        document.getElementById('anomalies-count').innerText = lista.length;
+      } else banner.classList.add('hidden');
     }
 
     // Convierte filas {precio_eco, precio_super, precio_diesel} en una fila por tipo de combustible
@@ -1119,8 +1306,8 @@
     function renderAbastecimientosTable() {
       const list = filterByPlacaAndDate(dashData.abastecimientos, 'filter-abs-placa', 'filter-abs-from', 'filter-abs-to').reverse();
       document.getElementById('table-abastecimientos').innerHTML = list.map(a => {
-        const cleanF = formatCleanEcuadorDate(a.fecha_hora), foto = a.foto_base64 || a.factura_base64 || a.foto_factura || '', alert = a._anomalyFlags && a._anomalyFlags.length;
-        return `<tr class="${alert ? 'bg-red-950/30 border-l-4 border-red-500' : 'hover:bg-slate-800/40'}"><td class="p-3 font-mono">${cleanF}</td><td class="p-3">${a.distrito}</td><td class="p-3"><b class="text-amber-300">${a.placa}</b><span class="block text-[10px] text-slate-400">${a.tipo_combustible || 'ECO'}</span></td><td class="p-3">${a.nombre_conductor}</td><td class="p-3 font-bold text-amber-400">${Number(a.galones).toFixed(4)}</td><td class="p-3 font-mono">$${Number(a.precio_galon).toFixed(3)}</td><td class="p-3 font-bold text-emerald-400">$${Number(a.total_usd).toFixed(2)}</td><td class="p-3 font-mono">${a.kilometraje} km</td><td class="p-3 font-mono">${a.recorrido_km > 0 ? a.recorrido_km + ' km' : 'Base Inicial'}</td><td class="p-3">${foto ? `<button onclick="openInvoiceByIndex('${a.id_registro}')" class="px-2 py-1 rounded bg-sky-500/20 text-sky-300 text-xs">Ver Factura</button>` : '-'}</td><td class="p-3 text-right space-x-1"><button onclick="requestRecordAction('ABASTECIMIENTO','${a.id_registro}','EDIT','${a.galones}','${a.kilometraje}')" class="px-2 py-1 rounded bg-amber-500/20 text-amber-300"><i class="fas fa-edit"></i></button><button onclick="requestRecordAction('ABASTECIMIENTO','${a.id_registro}','DELETE')" class="px-2 py-1 rounded bg-red-500/20 text-red-300"><i class="fas fa-trash"></i></button></td></tr>`;
+        const cleanF = formatCleanEcuadorDate(a.fecha_hora), foto = a.foto_base64 || a.factura_base64 || a.foto_factura || '', alert = !!a._alerta;
+        return `<tr ${alert ? `onclick="rowAlertClick(event,'${esc(a.id_registro)}')" title="Toque para ver el motivo de la alerta"` : ''} class="${alert ? 'bg-red-950/30 border-l-4 border-red-500 cursor-pointer hover:bg-red-900/40' : 'hover:bg-slate-800/40'}"><td class="p-3 font-mono">${cleanF}</td><td class="p-3">${a.distrito}</td><td class="p-3"><b class="text-amber-300">${a.placa}</b><span class="block text-[10px] text-slate-400">${a.tipo_combustible || 'ECO'}</span></td><td class="p-3">${a.nombre_conductor}</td><td class="p-3 font-bold text-amber-400">${Number(a.galones).toFixed(4)}</td><td class="p-3 font-mono">$${Number(a.precio_galon).toFixed(3)}</td><td class="p-3 font-bold text-emerald-400">$${Number(a.total_usd).toFixed(2)}</td><td class="p-3 font-mono">${a.kilometraje} km</td><td class="p-3 font-mono">${a.recorrido_km > 0 ? a.recorrido_km + ' km' : 'Base Inicial'}</td><td class="p-3">${foto ? `<button onclick="openInvoiceByIndex('${a.id_registro}')" class="px-2 py-1 rounded bg-sky-500/20 text-sky-300 text-xs">Ver Factura</button>` : '-'}</td><td class="p-3 text-right space-x-1"><button onclick="requestRecordAction('ABASTECIMIENTO','${a.id_registro}','EDIT','${a.galones}','${a.kilometraje}')" class="px-2 py-1 rounded bg-amber-500/20 text-amber-300"><i class="fas fa-edit"></i></button><button onclick="requestRecordAction('ABASTECIMIENTO','${a.id_registro}','DELETE')" class="px-2 py-1 rounded bg-red-500/20 text-red-300"><i class="fas fa-trash"></i></button></td></tr>`;
       }).join('') || '<tr><td colspan="11" class="p-4 text-center text-slate-400">Sin registros.</td></tr>';
     }
 
@@ -1278,7 +1465,7 @@
 
     async function handleDeleteVehiculo(placa) {
       if (!confirm(`¿Eliminar ${placa}?`)) return;
-      try { await apiCall('DELETE_VEHICULO', { placa }); await refreshDashboardData(); }
+      try { await apiCall('DELETE_VEHICULO', { placa, user: currentUser }); await refreshDashboardData(); }
       catch (err) { showAlert(err.message, true); }
     }
 
@@ -1607,6 +1794,338 @@
       new QRCode(document.getElementById('qr-abastecimiento'), { text: u1, width: 180, height: 180 });
       new QRCode(document.getElementById('qr-bitacora'), { text: u2, width: 180, height: 180 });
     }
+
+    // =====================================================================================
+    //  ALERTAS: ventana de emergencia con el detalle redactado por el servidor
+    // =====================================================================================
+    function rowAlertClick(ev, id) {
+      if (ev.target.closest('button, a, input, select')) return;   // los botones de la fila siguen funcionando
+      openAlertaModal(id);
+    }
+
+    function openAlertaModal(id) {
+      const a = dashAll && dashAll.alertas_abs && dashAll.alertas_abs[id];
+      if (!a) return;
+      openAlertaData(a.mensajes, { placa: a.placa, fecha_hora: a.fecha_hora, conductor: a.conductor });
+    }
+
+    function openAlertaData(mensajes, meta) {
+      const chip = (ic, t) => `<span style="display:inline-flex;align-items:center;gap:6px;background:rgba(15,23,42,.9);border:1px solid rgba(148,163,184,.35);border-radius:8px;padding:5px 10px;font-size:12px;color:#e2e8f0"><i class="fas ${ic}" style="color:#fca5a5"></i>${esc(t)}</span>`;
+      const f = String(meta.fecha_hora || '');
+      document.getElementById('alm-title').innerText = (mensajes.length > 1 ? 'Se detectaron ' + mensajes.length + ' inconsistencias' : (mensajes[0] ? mensajes[0].titulo : 'Alerta'));
+      document.getElementById('alm-meta').innerHTML =
+        chip('fa-car', 'Placa ' + meta.placa) + chip('fa-calendar-day', f.substring(0, 10)) + chip('fa-clock', f.substring(11, 16) || '—') + chip('fa-user', meta.conductor || 'Conductor no registrado');
+      document.getElementById('alm-body').innerHTML = mensajes.map((m, i) =>
+        `<div class="alm-item"><h4>${mensajes.length > 1 ? (i + 1) + '. ' : ''}${esc(m.titulo)}</h4><p>${esc(m.texto)}</p></div>`).join('');
+      document.getElementById('alert-modal').classList.add('show');
+    }
+    function closeAlertaModal() { document.getElementById('alert-modal').classList.remove('show'); }
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAlertaModal(); });
+
+    // =====================================================================================
+    //  SUPERVISORES (panel del SuperAdmin)
+    // =====================================================================================
+    function supLink(id) { return location.origin + location.pathname + '?sup=' + encodeURIComponent(id); }
+
+    function renderSupervisores() {
+      const sel = document.getElementById('sup-distrito');
+      if (sel && !sel.dataset.ok || (sel && sel.options.length <= 1)) {
+        const list = (publicData.distritos || []).slice().sort();
+        sel.innerHTML = '<option value="">Seleccione un distrito...</option>' + list.map(d => `<option value="${esc(d)}">${esc(d)}</option>`).join('');
+        sel.dataset.ok = '1';
+      }
+      const box = document.getElementById('sup-lista');
+      const lista = (dashAll && dashAll.supervisores) || [];
+      if (!lista.length) { box.innerHTML = '<p class="text-xs text-slate-400">Aún no hay supervisores registrados.</p>'; return; }
+      box.innerHTML = lista.map(s => {
+        const act = s.activo === 'SI', pend = s.cambio_token === 'SI';
+        return `<div class="p-4 rounded-xl bg-slate-900/80 border ${act ? 'border-slate-700' : 'border-red-500/40 opacity-70'}">
+          <div class="flex flex-wrap items-start justify-between gap-2">
+            <div><p class="font-bold text-sm text-white">${esc(s.nombre)}</p>
+              <p class="text-[11px] text-slate-400">${esc(s.email)} · <b class="text-cyan-300">${esc(s.distrito)}</b></p>
+              <p class="text-[10px] text-slate-500 mt-1">Último acceso: ${esc(String(s.ultimo_acceso || 'nunca').substring(0, 16) || 'nunca')}</p></div>
+            <div class="flex gap-1 flex-wrap">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold ${act ? 'bg-emerald-500/20 text-emerald-300' : 'bg-red-500/20 text-red-300'}">${act ? 'ACTIVO' : 'DESACTIVADO'}</span>
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold ${pend ? 'bg-amber-500/20 text-amber-300' : 'bg-sky-500/20 text-sky-300'}">${pend ? 'TOKEN TEMPORAL' : 'TOKEN PROPIO'}</span>
+            </div></div>
+          <div class="mt-3 flex flex-wrap gap-2 text-xs">
+            <button onclick="copySupLink('${esc(s.id_supervisor)}')" class="px-2.5 py-1 rounded bg-cyan-500/20 text-cyan-300"><i class="fas fa-link mr-1"></i>Copiar enlace</button>
+            <button onclick="shareSupWhats('${esc(s.id_supervisor)}')" class="px-2.5 py-1 rounded bg-emerald-500/20 text-emerald-300"><i class="fab fa-whatsapp mr-1"></i>WhatsApp</button>
+            <button onclick="resetSup('${esc(s.id_supervisor)}')" class="px-2.5 py-1 rounded bg-amber-500/20 text-amber-300"><i class="fas fa-key mr-1"></i>Reenviar token</button>
+            <button onclick="toggleSup('${esc(s.id_supervisor)}', ${act ? 'false' : 'true'})" class="px-2.5 py-1 rounded bg-red-500/20 text-red-300">${act ? 'Desactivar' : 'Activar'}</button>
+          </div></div>`;
+      }).join('');
+    }
+
+    async function handleCreateSupervisor(e) {
+      e.preventDefault();
+      try {
+        const r = await apiCall('CREATE_SUPERVISOR', { user: currentUser, supervisor: {
+          nombre: document.getElementById('sup-nombre').value, email: document.getElementById('sup-email').value, distrito: document.getElementById('sup-distrito').value } });
+        const link = supLink(r.id_supervisor), box = document.getElementById('sup-nuevo-link');
+        box.classList.remove('hidden');
+        box.innerHTML = `<p class="font-bold text-cyan-300"><i class="fas fa-check-circle mr-1"></i>${esc(r.message)}</p>
+          ${r.token_temporal ? `<p>Token temporal: <span class="font-mono text-amber-300 text-base tracking-widest">${esc(r.token_temporal)}</span></p>` : ''}
+          <p class="text-slate-400">Enlace personal del supervisor:</p>
+          <p class="font-mono text-[11px] break-all text-slate-200 bg-slate-950 p-2 rounded">${esc(link)}</p>
+          <div class="flex gap-2"><button onclick="copySupLink('${esc(r.id_supervisor)}')" class="px-2.5 py-1 rounded bg-cyan-500/20 text-cyan-300">Copiar enlace</button><button onclick="shareSupWhats('${esc(r.id_supervisor)}')" class="px-2.5 py-1 rounded bg-emerald-500/20 text-emerald-300">Enviar por WhatsApp</button></div>`;
+        e.target.reset();
+        await refreshDashboardData(); renderSupervisores();
+      } catch (err) { showAlert(err.message, true); }
+    }
+
+    async function copySupLink(id) {
+      const l = supLink(id);
+      try { await navigator.clipboard.writeText(l); showAlert('Enlace copiado al portapapeles.'); }
+      catch (e) { prompt('Copie el enlace:', l); }
+    }
+    function shareSupWhats(id) {
+      const s = ((dashAll && dashAll.supervisores) || []).find(x => x.id_supervisor === id);
+      const txt = `Panel de Supervisión de Combustible${s ? ' - ' + s.distrito : ''}\nIngrese con su enlace personal y el token temporal que recibió por correo:\n${supLink(id)}`;
+      window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank');
+    }
+    async function resetSup(id) {
+      if (!confirm('¿Generar un nuevo token temporal y enviarlo por correo? El token actual dejará de funcionar.')) return;
+      try {
+        const r = await apiCall('RESET_SUPERVISOR_TOKEN', { user: currentUser, id_supervisor: id });
+        showAlert(r.message + (r.token_temporal ? ' ' : ''));
+        await refreshDashboardData(); renderSupervisores();
+      } catch (err) { showAlert(err.message, true); }
+    }
+    async function toggleSup(id, activo) {
+      try { const r = await apiCall('SET_SUPERVISOR_ACTIVO', { user: currentUser, id_supervisor: id, activo }); showAlert(r.message); await refreshDashboardData(); renderSupervisores(); }
+      catch (err) { showAlert(err.message, true); }
+    }
+
+    // =====================================================================================
+    //  VISTA DEL SUPERVISOR (?sup=ID): token + panel 3D adaptable a móvil / tablet / escritorio
+    // =====================================================================================
+    const SV = { id: '', session: '', data: null, periodo: 'semana', metrica: 'galones', filtro: 'todas', timer: null };
+    const svStore = (k, v) => { try { if (v === undefined) return sessionStorage.getItem(k); if (v === null) sessionStorage.removeItem(k); else sessionStorage.setItem(k, v); } catch (e) {} return null; };
+    const svFmt = (n, d = 1) => Number(n || 0).toLocaleString('es-EC', { minimumFractionDigits: d, maximumFractionDigits: d });
+    const SV_PER = { dia: 'Hoy', semana: 'Esta semana', mes: 'Este mes' };
+    const SV_PREV = { dia: 'ayer', semana: 'semana anterior', mes: 'mes anterior' };
+
+    function initSupervisorMode(id) {
+      SV.id = id;
+      document.getElementById('sv-app').classList.add('show');
+      document.body.style.overflow = 'hidden';
+      const fl = document.querySelector('.sv-floaters');
+      for (let i = 0; i < 9; i++) {
+        const c = document.createElement('div'); c.className = 'sv-cube';
+        c.style.cssText = `--s:${30 + Math.random() * 50}px;--x:${Math.random() * 95}%;--y:${Math.random() * 90}%;--t:${24 + Math.random() * 26}s`;
+        c.innerHTML = '<i></i><i></i><i></i><i></i><i></i><i></i>'; fl.appendChild(c);
+      }
+      svTilt(document.getElementById('sv-login-card'), 7);
+      const ses = svStore('sv_ses_' + id);
+      if (ses) { SV.session = ses; svLoad(); } else svShowLogin();
+    }
+
+    function svShowLogin(msg) {
+      clearInterval(SV.timer);
+      document.getElementById('sv-main').style.display = 'none';
+      document.getElementById('sv-login').style.display = 'flex';
+      document.getElementById('sv-step-token').style.display = 'block';
+      document.getElementById('sv-step-change').style.display = 'none';
+      document.getElementById('sv-token').value = '';
+      document.getElementById('sv-err').innerText = msg || '';
+    }
+
+    async function svLogin() {
+      const t = document.getElementById('sv-token').value;
+      if (!t.trim()) { document.getElementById('sv-err').innerText = 'Ingrese su token.'; return; }
+      try {
+        const r = await apiCall('SUP_LOGIN', { id_supervisor: SV.id, token: t });
+        SV.session = r.session; svStore('sv_ses_' + SV.id, r.session);
+        document.getElementById('sv-err').innerText = '';
+        if (r.cambio_token === 'SI') {
+          document.getElementById('sv-step-token').style.display = 'none';
+          document.getElementById('sv-step-change').style.display = 'block';
+        } else await svLoad();
+      } catch (e) { document.getElementById('sv-err').innerText = e.message; }
+    }
+
+    async function svChangeToken() {
+      const a = document.getElementById('sv-new1').value, b = document.getElementById('sv-new2').value;
+      if (a !== b) { document.getElementById('sv-err').innerText = 'Los dos tokens no coinciden.'; return; }
+      try { await apiCall('SUP_CHANGE_TOKEN', { session: SV.session, nuevo_token: a }); document.getElementById('sv-err').innerText = ''; await svLoad(); }
+      catch (e) { document.getElementById('sv-err').innerText = e.message; }
+    }
+
+    async function svLoad() {
+      try {
+        SV.data = await apiCall('SUP_DASHBOARD', { session: SV.session });
+        document.getElementById('sv-login').style.display = 'none';
+        document.getElementById('sv-main').style.display = 'block';
+        svRender();
+        clearInterval(SV.timer); SV.timer = setInterval(() => svLoad().catch(() => {}), 5 * 60 * 1000);
+      } catch (e) {
+        svStore('sv_ses_' + SV.id, null); SV.session = '';
+        svShowLogin(/sesi[oó]n|desactivado|token/i.test(e.message) ? '' : e.message);
+      }
+    }
+
+    async function svLogout() {
+      try { await apiCall('SUP_LOGOUT', { session: SV.session }); } catch (e) {}
+      svStore('sv_ses_' + SV.id, null); SV.session = ''; SV.data = null; svShowLogin();
+    }
+
+    function svTilt(el, max) {
+      if (!el || !window.matchMedia('(hover: hover)').matches) return;
+      el.addEventListener('pointermove', e => {
+        const r = el.getBoundingClientRect(), x = (e.clientX - r.left) / r.width - .5, y = (e.clientY - r.top) / r.height - .5;
+        el.style.transform = `rotateX(${(-y * max).toFixed(2)}deg) rotateY(${(x * max).toFixed(2)}deg) translateZ(6px)`;
+      });
+      el.addEventListener('pointerleave', () => { el.style.transform = ''; });
+    }
+
+    function svDelta(cur, prev, sufijo) {
+      if (!prev && !cur) return `<span class="sv-eq">= igual que ${SV_PREV[SV.periodo]}</span>`;
+      if (!prev) return `<span class="sv-up">▲ nuevo vs ${SV_PREV[SV.periodo]}</span>`;
+      const d = (cur - prev) / prev * 100;
+      if (Math.abs(d) < 0.5) return `<span class="sv-eq">= igual que ${SV_PREV[SV.periodo]}</span>`;
+      return `<span class="${d > 0 ? 'sv-up' : 'sv-down'}">${d > 0 ? '▲' : '▼'} ${svFmt(Math.abs(d), 0)}% vs ${SV_PREV[SV.periodo]}</span>`;
+    }
+
+    function svRender() {
+      const D = SV.data, p = D.periodos[SV.periodo], pv = p.previo, pct = D.total_unidades ? p.unidades_abastecieron / D.total_unidades : 0;
+      const kpi = (i, icon, c1, label, val, sub, bad) => `<div class="sv-kpi ${bad ? 'bad' : ''}" style="--c1:${c1};animation-delay:${i * 70}ms"><div class="ic"><i class="fas ${icon}"></i></div><div class="lb">${label}</div><div class="vl">${val}</div><div class="dl">${sub}</div></div>`;
+      const num = (v, d, pre) => `<span data-count="${v}" data-dec="${d}" data-pre="${pre || ''}">0</span>`;
+      const tabs = ['dia', 'semana', 'mes'], names = { dia: 'Diario', semana: 'Semanal', mes: 'Mensual' };
+
+      document.getElementById('sv-main').innerHTML = `
+        <div class="sv-hero">
+          <div class="sv-logo-scene"><div class="sv-logo"><b>JD</b><b>JD</b><b>JD</b><b>JD</b></div></div>
+          <div style="min-width:0"><div class="sv-title">Supervisión de Combustible</div>
+            <div class="sv-sub">Distrito <b>${esc(D.supervisor.distrito)}</b> · ${esc(D.supervisor.nombre)} · ${D.total_unidades} unidades</div></div>
+          <div class="sv-actions"><button class="sv-btn" onclick="svLoad()"><i class="fas fa-rotate"></i> Actualizar</button><button class="sv-btn" onclick="svLogout()"><i class="fas fa-right-from-bracket"></i> Salir</button></div>
+        </div>
+        <div class="sv-tabs" id="sv-tabs"><span class="sv-pill" id="sv-pill"></span>${tabs.map(t => `<button class="${SV.periodo === t ? 'on' : ''}" data-t="${t}" onclick="svSetPeriodo('${t}')">${names[t]}</button>`).join('')}</div>
+        <div class="sv-range">${SV_PER[SV.periodo]}: ${esc(p.desde)}${p.desde !== p.hasta ? ' → ' + esc(p.hasta) : ''} · actualizado ${esc(String(D.generado).substring(0, 16))}</div>
+
+        <div class="sv-kpis">
+          ${kpi(0, 'fa-truck-fast', '#38bdf8', 'Unidades que abastecieron', `${num(p.unidades_abastecieron, 0)}<span style="font-size:.55em;color:#94a3b8"> / ${D.total_unidades}</span>`, `${svFmt(pct * 100, 0)}% de la flota`, false)}
+          ${kpi(1, 'fa-gas-pump', '#fbbf24', 'Abastecimientos', num(p.abastecimientos, 0), svDelta(p.abastecimientos, pv.abastecimientos), false)}
+          ${kpi(2, 'fa-droplet', '#34d399', 'Galones', num(p.galones, 1), svDelta(p.galones, pv.galones), false)}
+          ${kpi(3, 'fa-dollar-sign', '#a78bfa', 'Gasto estimado', num(p.usd, 2, '$'), svDelta(p.usd, pv.usd), false)}
+          ${kpi(4, 'fa-triangle-exclamation', p.alertas_total ? '#f87171' : '#4ade80', 'Alertas', num(p.alertas_total, 0), `${p.alertas_doble} doble abast. · ${p.alertas_rendimiento} rendimiento`, p.alertas_total > 0)}
+          ${kpi(5, 'fa-gauge-high', '#f472b6', 'Rendimiento promedio', p.rendimiento ? num(p.rendimiento, 1) + '<span style="font-size:.45em;color:#94a3b8"> km/gal</span>' : '—', D.rendimiento_historico ? `histórico distrito: ${svFmt(D.rendimiento_historico.kpg, 1)} km/gal` : 'sin histórico suficiente', false)}
+        </div>
+
+        <div class="sv-card"><div class="sv-h2"><i class="fas fa-chart-column" style="color:#38bdf8"></i>Evolución diaria <small>(mueva el cursor o toque una barra)</small>
+          <div class="sv-seg">${[['galones', 'Galones'], ['abastecimientos', 'Cargas'], ['alertas', 'Alertas']].map(([k, n]) => `<button class="${SV.metrica === k ? 'on' : ''}" onclick="svSetMetrica('${k}')">${n}</button>`).join('')}</div></div>
+          <div class="sv-chart-scene" id="sv-scene"><div class="sv-chart" id="sv-chart"></div></div>
+          <div id="sv-chart-info" style="font-size:12px;color:#94a3b8;text-align:center;margin-top:6px;min-height:18px">&nbsp;</div></div>
+
+        <div class="sv-card"><div class="sv-h2"><i class="fas fa-file-contract" style="color:#fbbf24"></i>Estado del contrato <small>(en cantidad de combustible)</small></div>
+          <div class="sv-grid2">${D.contratos.length ? D.contratos.map(svContratoHTML).join('') : '<p style="font-size:12px;color:#94a3b8">No hay un contrato asociado a las unidades de este distrito.</p>'}</div></div>
+
+        <div class="sv-card"><div class="sv-h2"><i class="fas fa-siren-on" style="color:#f87171"></i>Alertas ${SV_PER[SV.periodo].toLowerCase()} <small>(toque una para ver el detalle)</small></div><div id="sv-alerts"></div></div>
+
+        <div class="sv-card"><div class="sv-h2"><i class="fas fa-car-side" style="color:#34d399"></i>Unidades
+          <div class="sv-seg">${[['todas', 'Todas'], ['si', 'Abastecieron'], ['no', 'Sin abastecer'], ['alerta', 'Con alerta']].map(([k, n]) => `<button class="${SV.filtro === k ? 'on' : ''}" onclick="svSetFiltro('${k}')">${n}</button>`).join('')}</div></div>
+          <div class="sv-units" id="sv-units"></div></div>
+        <p style="text-align:center;font-size:10px;color:#64748b;padding:6px 0 24px">Alertas: doble abastecimiento en el mismo día y rendimiento fuera de ±${Math.round((D.parametros.tolerancia || .25) * 100)}% del promedio histórico de cada unidad.</p>`;
+
+      svPill(); svAlerts(); svUnits(); svChart();
+      document.querySelectorAll('#sv-main .sv-kpi').forEach(k => svTilt(k, 14));
+      svCountUp();
+    }
+
+    function svPill() {
+      const tabs = document.getElementById('sv-tabs'), on = tabs && tabs.querySelector('button.on'), pill = document.getElementById('sv-pill');
+      if (on && pill) { pill.style.left = on.offsetLeft + 'px'; pill.style.width = on.offsetWidth + 'px'; }
+    }
+    function svCountUp() {
+      document.querySelectorAll('#sv-main [data-count]').forEach(el => {
+        const to = Number(el.dataset.count), d = Number(el.dataset.dec), pre = el.dataset.pre || '', t0 = performance.now(), dur = 900;
+        const step = t => { const k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3); el.textContent = pre + svFmt(to * e, d); if (k < 1) requestAnimationFrame(step); };
+        requestAnimationFrame(step);
+      });
+    }
+    function svSetPeriodo(t) { SV.periodo = t; svRender(); }
+    function svSetMetrica(m) { SV.metrica = m; svRender(); }
+    function svSetFiltro(f) { SV.filtro = f; svRender(); }
+
+    function svChart() {
+      const D = SV.data, n = SV.periodo === 'dia' ? 7 : SV.periodo === 'semana' ? 14 : 31, serie = D.serie.slice(-n), per = D.periodos[SV.periodo];
+      const vals = serie.map(s => s[SV.metrica]), max = Math.max(...vals, SV.metrica === 'alertas' ? 1 : 0.0001);
+      const ch = document.getElementById('sv-chart');
+      ch.innerHTML = serie.map((s, i) => {
+        const dentro = s.fecha >= per.desde && s.fecha <= per.hasta;
+        return `<div class="sv-bar ${s.alertas > 0 ? 'hot' : ''}" data-i="${i}" style="--c1:#7dd3fc;--c2:#0284c7;--c3:#075985;${dentro ? '' : 'opacity:.45'}">
+          <div class="p" data-h="${Math.max(vals[i] > 0 ? 3 : 0, vals[i] / max * 100).toFixed(1)}" style="--d:${(i * 25)}ms"><i class="f"></i><i class="r"></i><i class="t"></i></div>
+          <span class="x">${(n <= 14 || i % 3 === 0) ? esc(s.fecha.substring(8, 10) + '/' + s.fecha.substring(5, 7)) : ''}</span></div>`;
+      }).join('');
+      requestAnimationFrame(() => requestAnimationFrame(() => ch.querySelectorAll('.p').forEach(e => { e.style.height = e.dataset.h + '%'; })));
+      const info = document.getElementById('sv-chart-info');
+      const show = i => { const s = serie[i]; info.innerHTML = `<b style="color:#fff">${esc(s.fecha)}</b> · ${s.abastecimientos} cargas · ${svFmt(s.galones, 1)} gal · ${'$' + svFmt(s.usd, 2)} · <span style="color:${s.alertas ? '#fca5a5' : '#86efac'}">${s.alertas} alertas</span>`; };
+      ch.querySelectorAll('.sv-bar').forEach(b => { b.addEventListener('mouseenter', () => show(+b.dataset.i)); b.addEventListener('click', () => show(+b.dataset.i)); });
+      const sc = document.getElementById('sv-scene');
+      if (window.matchMedia('(hover: hover)').matches) {
+        sc.onpointermove = e => { const r = sc.getBoundingClientRect(), x = (e.clientX - r.left) / r.width - .5, y = (e.clientY - r.top) / r.height - .5; ch.style.setProperty('--ry', (-16 + x * 34) + 'deg'); ch.style.setProperty('--rx', (22 - y * 18) + 'deg'); };
+        sc.onpointerleave = () => { ch.style.setProperty('--ry', '-16deg'); ch.style.setProperty('--rx', '22deg'); };
+      }
+    }
+
+    function svContratoHTML(c, i) {
+      const col = ESTADO_COLOR[c.estado], k = Object.assign({ c: { nombre: c.nombre } }, c);
+      const sobre = c.saldoUsd < 0, galDia = c.precioRef ? c.recDia / c.precioRef : 0;
+      return `<div class="sv-bottle"><div class="bt">${bottleSVG(k, 'sv' + i)}</div>
+        <div style="min-width:0;flex:1">
+          <div style="font-weight:800;color:#fff;font-size:14px">${esc(c.nombre)}</div>
+          <span class="sv-badge" style="color:${col.light};border-color:${col.main};background:${col.main}22;margin:4px 0 8px">${esc(col.label)}</span>
+          <div style="font-size:12px;line-height:1.7;color:#cbd5e1">
+            Contratados: <b style="color:#fff">${svFmt(c.galTotal, 0)} gal</b><br>
+            Consumidos: <b style="color:#fdba74">${svFmt(c.galCons, 0)} gal</b> (${svFmt(c.pctCons * 100, 1)}%)<br>
+            ${sobre ? '<b style="color:#fca5a5">Sobregirado: ' + svFmt(Math.abs(c.galSaldo), 0) + ' gal</b>' : 'Disponible: <b style="color:#86efac">' + svFmt(c.galSaldo, 0) + ' gal</b> (' + '$' + svFmt(c.saldoUsd, 2) + ')'}<br>
+            Vigencia: faltan <b>${c.restantes}</b> días${c.diasAlcanza != null && !sobre ? ` · al ritmo actual alcanza <b>${c.diasAlcanza}</b> días` : ''}
+          </div>
+          <div class="sv-pbar" style="margin-top:8px"><i style="width:${Math.min(100, c.pctCons * 100)}%;background:${col.main}"></i><i style="width:2px;left:${Math.min(100, c.pctEsp * 100)}%;background:#fbbf24;inset:0 auto 0 auto"></i></div>
+          <div style="font-size:10px;color:#94a3b8;margin-top:3px">Barra: consumo real · marca amarilla: consumo equitable esperado (${svFmt(c.pctEsp * 100, 0)}%)${!sobre && galDia ? ` · ideal ≈ ${svFmt(galDia, 0)} gal/día` : ''}</div>
+          <div style="font-size:10px;color:#64748b;margin-top:2px">Su distrito aporta ${c.unidades_del_distrito} de ${c.nUnidades} unidades de este contrato.</div>
+        </div></div>`;
+    }
+
+    function svAlerts() {
+      const D = SV.data, p = D.periodos[SV.periodo], list = D.alertas.filter(a => a.fecha >= p.desde && a.fecha <= p.hasta), box = document.getElementById('sv-alerts');
+      if (!list.length) { box.innerHTML = '<div class="sv-empty"><i class="fas fa-circle-check" style="font-size:28px"></i><br>Sin alertas en este periodo.</div>'; return; }
+      window._svAl = list;
+      box.innerHTML = list.slice(0, 40).map((a, i) => `<div class="sv-alert" style="animation-delay:${i * 40}ms" onclick="openAlertaData(window._svAl[${i}].mensajes,{placa:window._svAl[${i}].placa,fecha_hora:window._svAl[${i}].fecha_hora,conductor:window._svAl[${i}].conductor})">
+        <div class="si"><i class="fas fa-triangle-exclamation"></i></div>
+        <div style="min-width:0"><div style="font-weight:800;color:#fff;font-size:13px">${esc(a.placa)} <span style="font-weight:500;color:#fca5a5;font-size:11px">· ${esc(String(a.fecha_hora).substring(0, 16))} · ${esc(a.conductor || 'conductor no registrado')}</span></div>
+          <div>${a.mensajes.map(m => `<span class="sv-chip">${esc(m.titulo)}</span>`).join('')}</div></div></div>`).join('') +
+        (list.length > 40 ? `<p style="font-size:11px;color:#94a3b8;text-align:center">Mostrando 40 de ${list.length}.</p>` : '');
+    }
+
+    function svUnits() {
+      const D = SV.data;
+      let lista = D.unidades.map(u => Object.assign({ pp: u.periodos[SV.periodo] }, u));
+      if (SV.filtro === 'si') lista = lista.filter(u => u.pp.n > 0);
+      if (SV.filtro === 'no') lista = lista.filter(u => u.pp.n === 0);
+      if (SV.filtro === 'alerta') lista = lista.filter(u => u.pp.alertas > 0);
+      lista.sort((a, b) => (b.pp.alertas - a.pp.alertas) || (b.pp.n - a.pp.n) || a.placa.localeCompare(b.placa));
+      const box = document.getElementById('sv-units');
+      if (!lista.length) { box.innerHTML = '<p style="font-size:12px;color:#94a3b8;grid-column:1/-1;text-align:center;padding:14px">Ninguna unidad coincide con este filtro.</p>'; return; }
+      box.innerHTML = lista.map(u => {
+        const pp = u.pp, ref = u.kpg_historico, max = ref ? ref * 1.8 : 1, tol = D.parametros.tolerancia || .25;
+        let gauge = '<div style="font-size:10px;color:#64748b;margin-top:8px">Sin histórico suficiente de rendimiento</div>';
+        if (ref) {
+          const lo = ref * (1 - tol) / max * 100, hi = ref * (1 + tol) / max * 100, k = pp.kpg, pos = k == null ? null : Math.max(2, Math.min(98, k / max * 100));
+          const fuera = k != null && (k < ref * (1 - tol) || k > ref * (1 + tol));
+          gauge = `<div class="sv-gauge"><div class="band" style="left:${lo}%;width:${hi - lo}%"></div>${pos != null ? `<div class="dot" style="left:${pos}%;background:${fuera ? '#ef4444' : '#22c55e'}"></div>` : ''}</div>
+            <div style="display:flex;justify-content:space-between;font-size:10px;color:#94a3b8"><span>Histórico ${svFmt(ref, 1)} km/gal</span><span style="color:${fuera ? '#fca5a5' : '#86efac'}">${k != null ? 'Periodo ' + svFmt(k, 1) : 'sin recorrido medible'}</span></div>`;
+        }
+        return `<div class="sv-unit ${pp.alertas ? 'al' : ''} ${pp.n ? '' : 'no'}">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:6px"><b style="font-size:15px;color:#fbbf24;font-family:ui-monospace,monospace">${esc(u.placa)}</b>
+            <span class="sv-badge" style="${pp.alertas ? 'color:#fca5a5;border-color:#ef4444;background:#ef444422' : pp.n ? 'color:#86efac;border-color:#22c55e;background:#22c55e22' : 'color:#94a3b8;border-color:#475569'}">${pp.alertas ? pp.alertas + ' ALERTA' + (pp.alertas > 1 ? 'S' : '') : pp.n ? 'ABASTECIÓ' : 'SIN ABASTECER'}</span></div>
+          <div style="font-size:11px;color:#94a3b8;margin:2px 0 6px">${esc(u.marca_modelo || '—')} · ${esc(u.tipo_combustible || '')}</div>
+          <div style="font-size:12px;color:#e2e8f0">${pp.n} cargas · ${svFmt(pp.galones, 1)} gal · $${svFmt(pp.usd, 2)}</div>
+          <div style="font-size:10px;color:#64748b;margin-top:2px">Último: ${u.ultimo_abastecimiento ? esc(String(u.ultimo_abastecimiento).substring(0, 16)) + (u.ultimo_conductor ? ' · ' + esc(u.ultimo_conductor) : '') : 'sin registros'}</div>
+          ${gauge}</div>`;
+      }).join('');
+    }
+    window.addEventListener('resize', () => { if (SV.data) svPill(); });
   </script>
 </body>
 </html>
