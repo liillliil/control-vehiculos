@@ -1831,7 +1831,7 @@
       const sel = document.getElementById('sup-distrito');
       if (sel && !sel.dataset.ok || (sel && sel.options.length <= 1)) {
         const list = (publicData.distritos || []).slice().sort();
-        sel.innerHTML = '<option value="">Seleccione un distrito...</option>' + list.map(d => `<option value="${esc(d)}">${esc(d)}</option>`).join('');
+        sel.innerHTML = '<option value="">Seleccione un distrito...</option><option value="TODOS">★ TODOS LOS SECTORES (supervisor general)</option>' + list.map(d => `<option value="${esc(d)}">${esc(d)}</option>`).join('');
         sel.dataset.ok = '1';
       }
       const box = document.getElementById('sup-lista');
@@ -1900,7 +1900,7 @@
     // =====================================================================================
     //  VISTA DEL SUPERVISOR (?sup=ID): token + panel 3D adaptable a móvil / tablet / escritorio
     // =====================================================================================
-    const SV = { id: '', session: '', data: null, periodo: 'semana', metrica: 'galones', filtro: 'todas', timer: null };
+    const SV = { id: '', session: '', data: null, periodo: 'semana', metrica: 'galones', filtro: 'todas', dist: '', timer: null };
     const svStore = (k, v) => { try { if (v === undefined) return sessionStorage.getItem(k); if (v === null) sessionStorage.removeItem(k); else sessionStorage.setItem(k, v); } catch (e) {} return null; };
     const svFmt = (n, d = 1) => Number(n || 0).toLocaleString('es-EC', { minimumFractionDigits: d, maximumFractionDigits: d });
     const SV_PER = { dia: 'Hoy', semana: 'Esta semana', mes: 'Este mes' };
@@ -1997,7 +1997,7 @@
         <div class="sv-hero">
           <div class="sv-logo-scene"><div class="sv-logo"><b>JD</b><b>JD</b><b>JD</b><b>JD</b></div></div>
           <div style="min-width:0"><div class="sv-title">Supervisión de Combustible</div>
-            <div class="sv-sub">Distrito <b>${esc(D.supervisor.distrito)}</b> · ${esc(D.supervisor.nombre)} · ${D.total_unidades} unidades</div></div>
+            <div class="sv-sub">${D.supervisor.general ? '<b>Todos los sectores</b>' : 'Distrito <b>' + esc(D.supervisor.distrito) + '</b>'} · ${esc(D.supervisor.nombre)} · ${D.total_unidades} unidades</div></div>
           <div class="sv-actions"><button class="sv-btn" onclick="svLoad()"><i class="fas fa-rotate"></i> Actualizar</button><button class="sv-btn" onclick="svLogout()"><i class="fas fa-right-from-bracket"></i> Salir</button></div>
         </div>
         <div class="sv-tabs" id="sv-tabs"><span class="sv-pill" id="sv-pill"></span>${tabs.map(t => `<button class="${SV.periodo === t ? 'on' : ''}" data-t="${t}" onclick="svSetPeriodo('${t}')">${names[t]}</button>`).join('')}</div>
@@ -2023,6 +2023,7 @@
         <div class="sv-card"><div class="sv-h2"><i class="fas fa-siren-on" style="color:#f87171"></i>Alertas ${SV_PER[SV.periodo].toLowerCase()} <small>(toque una para ver el detalle)</small></div><div id="sv-alerts"></div></div>
 
         <div class="sv-card"><div class="sv-h2"><i class="fas fa-car-side" style="color:#34d399"></i>Unidades
+          ${D.supervisor.general ? `<select onchange="SV.dist=this.value;svUnits()" style="background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:8px;padding:4px 8px;font-size:11px"><option value="">Todos los distritos</option>${[...new Set(D.unidades.map(u => u.distrito))].sort().map(d => `<option value="${esc(d)}" ${SV.dist === d ? 'selected' : ''}>${esc(d)}</option>`).join('')}</select>` : ''}
           <div class="sv-seg">${[['todas', 'Todas'], ['si', 'Abastecieron'], ['no', 'Sin abastecer'], ['alerta', 'Con alerta']].map(([k, n]) => `<button class="${SV.filtro === k ? 'on' : ''}" onclick="svSetFiltro('${k}')">${n}</button>`).join('')}</div></div>
           <div class="sv-units" id="sv-units"></div></div>
         <p style="text-align:center;font-size:10px;color:#64748b;padding:6px 0 24px">Alertas: doble abastecimiento en el mismo día y rendimiento fuera de ±${Math.round((D.parametros.tolerancia || .25) * 100)}% del promedio histórico de cada unidad.</p>`;
@@ -2083,7 +2084,7 @@
           </div>
           <div class="sv-pbar" style="margin-top:8px"><i style="width:${Math.min(100, c.pctCons * 100)}%;background:${col.main}"></i><i style="width:2px;left:${Math.min(100, c.pctEsp * 100)}%;background:#fbbf24;inset:0 auto 0 auto"></i></div>
           <div style="font-size:10px;color:#94a3b8;margin-top:3px">Barra: consumo real · marca amarilla: consumo equitable esperado (${svFmt(c.pctEsp * 100, 0)}%)${!sobre && galDia ? ` · ideal ≈ ${svFmt(galDia, 0)} gal/día` : ''}</div>
-          <div style="font-size:10px;color:#64748b;margin-top:2px">Su distrito aporta ${c.unidades_del_distrito} de ${c.nUnidades} unidades de este contrato.</div>
+          <div style="font-size:10px;color:#64748b;margin-top:2px">${SV.data.supervisor.general ? 'Unidades del contrato: ' + c.nUnidades : 'Su distrito aporta ' + c.unidades_del_distrito + ' de ' + c.nUnidades + ' unidades de este contrato.'}</div>
         </div></div>`;
     }
 
@@ -2101,6 +2102,7 @@
     function svUnits() {
       const D = SV.data;
       let lista = D.unidades.map(u => Object.assign({ pp: u.periodos[SV.periodo] }, u));
+      if (SV.dist) lista = lista.filter(u => u.distrito === SV.dist);
       if (SV.filtro === 'si') lista = lista.filter(u => u.pp.n > 0);
       if (SV.filtro === 'no') lista = lista.filter(u => u.pp.n === 0);
       if (SV.filtro === 'alerta') lista = lista.filter(u => u.pp.alertas > 0);
@@ -2119,7 +2121,7 @@
         return `<div class="sv-unit ${pp.alertas ? 'al' : ''} ${pp.n ? '' : 'no'}">
           <div style="display:flex;justify-content:space-between;align-items:center;gap:6px"><b style="font-size:15px;color:#fbbf24;font-family:ui-monospace,monospace">${esc(u.placa)}</b>
             <span class="sv-badge" style="${pp.alertas ? 'color:#fca5a5;border-color:#ef4444;background:#ef444422' : pp.n ? 'color:#86efac;border-color:#22c55e;background:#22c55e22' : 'color:#94a3b8;border-color:#475569'}">${pp.alertas ? pp.alertas + ' ALERTA' + (pp.alertas > 1 ? 'S' : '') : pp.n ? 'ABASTECIÓ' : 'SIN ABASTECER'}</span></div>
-          <div style="font-size:11px;color:#94a3b8;margin:2px 0 6px">${esc(u.marca_modelo || '—')} · ${esc(u.tipo_combustible || '')}</div>
+          <div style="font-size:11px;color:#94a3b8;margin:2px 0 6px">${D.supervisor.general ? '<b style="color:#7dd3fc">' + esc(u.distrito) + '</b> · ' : ''}${esc(u.marca_modelo || '—')} · ${esc(u.tipo_combustible || '')}</div>
           <div style="font-size:12px;color:#e2e8f0">${pp.n} cargas · ${svFmt(pp.galones, 1)} gal · $${svFmt(pp.usd, 2)}</div>
           <div style="font-size:10px;color:#64748b;margin-top:2px">Último: ${u.ultimo_abastecimiento ? esc(String(u.ultimo_abastecimiento).substring(0, 16)) + (u.ultimo_conductor ? ' · ' + esc(u.ultimo_conductor) : '') : 'sin registros'}</div>
           ${gauge}</div>`;
