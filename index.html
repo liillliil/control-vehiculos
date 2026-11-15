@@ -774,8 +774,32 @@
       }
     }
 
-    async function apiCall(action, payload = {}) {
-      setLoading(true, LOADING_MESSAGES[action]);
+    // ===== Datos en vivo: consulta liviana cada pocos segundos; solo si hay cambios se vuelve a pedir y pintar, sin pantalla de carga =====
+    const LIVE = { stamp: null, ultimo: 0, busy: false, timer: null, modo: '' };
+    const LIVE_MS = 8000, LIVE_FORZAR_MS = 150000;
+    function liveStart(modo) {
+      LIVE.modo = modo; clearInterval(LIVE.timer);
+      LIVE.timer = setInterval(liveTick, LIVE_MS);
+      if (!LIVE.vis) { LIVE.vis = true; document.addEventListener('visibilitychange', () => { if (!document.hidden) liveTick(); }); }
+    }
+    async function liveTick() {
+      if (document.hidden || LIVE.busy) return;
+      if (LIVE.modo === 'admin' && !currentUser) return;
+      if (LIVE.modo === 'sup' && (!SV.session || !SV.data)) return;
+      if (typeof isSubmitting !== 'undefined' && isSubmitting) return;
+      LIVE.busy = true;
+      try {
+        const v = await apiCall('GET_VERSION', {}, { silent: true });
+        const cambio = LIVE.stamp !== null && v.stamp !== LIVE.stamp, viejo = Date.now() - LIVE.ultimo > LIVE_FORZAR_MS;   // el refresco forzado cubre ediciones manuales en la hoja
+        if (cambio || viejo) {
+          if (LIVE.modo === 'sup') await svLoad(true); else await refreshDashboardData(true);
+        }
+      } catch (e) { /* sin conexión o servidor ocupado: se reintenta en el siguiente ciclo */ }
+      finally { LIVE.busy = false; }
+    }
+
+    async function apiCall(action, payload = {}, opts = {}) {
+      if (!opts.silent) setLoading(true, LOADING_MESSAGES[action]);
       try {
         const res = await fetch(API_URL, {
           method: 'POST',
@@ -786,7 +810,7 @@
         if (!json.success) throw new Error(json.message);
         return json.data;
       } finally {
-        setLoading(false);
+        if (!opts.silent) setLoading(false);
       }
     }
 
@@ -1087,11 +1111,12 @@
       document.getElementById('veh-contrato-box').classList.toggle('hidden', !isSuper);
       await refreshDashboardData();
       populateAllDistritoSelectors();
+      liveStart('admin');
       if (!isPersistent) showSection('sec-dash-bitacora');
     }
 
     function logout() {
-      currentUser = null;
+      currentUser = null; clearInterval(LIVE.timer); LIVE.stamp = null;
       filtroDistrito = '';
       dashAll = null;
       localStorage.removeItem('jd_fleet_user');
@@ -1176,8 +1201,32 @@
     let dashAll = null;
     let filtroDistrito = '';
 
-    async function refreshDashboardData() {
-      dashAll = await apiCall('GET_DASHBOARD_DATA', { user: currentUser });
+    // silent = actualización en segundo plano: sin pantalla de carga, conservando scroll, filtros y lo que se esté escribiendo
+    async function refreshDashboardData(silent = false) {
+      const nuevo = await apiCall('GET_DASHBOARD_DATA', { user: currentUser }, { silent });
+      if (!silent) return aplicarDashboard(nuevo);
+      const snap = snapshotUI(), animPrev = window.Chart && Chart.defaults ? Chart.defaults.animation : undefined;
+      if (window.Chart && Chart.defaults) Chart.defaults.animation = false;
+      try { aplicarDashboard(nuevo); } finally { if (window.Chart && Chart.defaults) Chart.defaults.animation = animPrev; }
+      restoreUI(snap);
+    }
+
+    function snapshotUI() {
+      const vals = {};
+      document.querySelectorAll('#sec-dash-bitacora ~ section select, section[id^="sec-dash"] select, section[id^="sec-dash"] input, section[id^="sec-dash"] textarea').forEach(el => { if (el.id) vals[el.id] = el.type === 'checkbox' ? el.checked : el.value; });
+      const sc = []; document.querySelectorAll('main, section, div').forEach(el => { if (el.scrollTop > 0 && el.scrollHeight > el.clientHeight) sc.push([el, el.scrollTop]); });
+      const a = document.activeElement;
+      return { vals, sc, x: window.scrollX, y: window.scrollY, focus: a && a.id ? { id: a.id, s: a.selectionStart, e: a.selectionEnd } : null };
+    }
+    function restoreUI(s) {
+      Object.keys(s.vals).forEach(id => { const el = document.getElementById(id); if (!el) return; if (el.type === 'checkbox') el.checked = s.vals[id]; else if (el.value !== s.vals[id] && (el.tagName !== 'SELECT' || [...el.options].some(o => o.value === s.vals[id]))) el.value = s.vals[id]; });
+      s.sc.forEach(([el, t]) => { el.scrollTop = t; });
+      if (s.focus) { const el = document.getElementById(s.focus.id); if (el && document.activeElement !== el) { el.focus({ preventScroll: true }); try { el.setSelectionRange(s.focus.s, s.focus.e); } catch (e) {} } }
+      window.scrollTo(s.x, s.y);
+    }
+
+    function aplicarDashboard(nuevo) {
+      dashAll = nuevo; LIVE.stamp = nuevo.stamp || LIVE.stamp; LIVE.ultimo = Date.now();
       dashAll.precios_combustible = flattenPrecios(dashAll.precios);
       if (dashAll.catalogos) {
         publicData.distritos = [...new Set([...dashAll.catalogos.filter(c => c.tipo === 'DISTRITO').map(c => c.valor), ...dashAll.vehiculos.map(v => v.distrito).filter(Boolean)])];
@@ -1933,7 +1982,7 @@
     // =====================================================================================
     //  VISTA DEL SUPERVISOR (?sup=ID): token + panel 3D adaptable a móvil / tablet / escritorio
     // =====================================================================================
-    const SV = { id: '', session: '', data: null, periodo: 'semana', metrica: 'galones', filtro: 'todas', dist: '', q: '', timer: null };
+    const SV = { quiet: false, id: '', session: '', data: null, periodo: 'semana', metrica: 'galones', filtro: 'todas', dist: '', q: '', timer: null };
     const svStore = (k, v) => { try { if (v === undefined) return sessionStorage.getItem(k); if (v === null) sessionStorage.removeItem(k); else sessionStorage.setItem(k, v); } catch (e) {} return null; };
     const svFmt = (n, d = 1) => Number(n || 0).toLocaleString('es-EC', { minimumFractionDigits: d, maximumFractionDigits: d });
     const SV_PER = { dia: 'hoy', semana: 'esta semana', mes: 'este mes' };
@@ -1984,14 +2033,23 @@
       catch (e) { document.getElementById('sv-err').innerText = e.message; }
     }
 
-    async function svLoad() {
+    async function svLoad(silent = false) {
       try {
-        SV.data = await apiCall('SUP_DASHBOARD', { session: SV.session });
+        const nuevo = await apiCall('SUP_DASHBOARD', { session: SV.session }, { silent });
+        LIVE.stamp = nuevo.stamp || LIVE.stamp; LIVE.ultimo = Date.now();
         document.getElementById('sv-login').style.display = 'none';
         document.getElementById('sv-main').style.display = 'block';
-        svRender();
-        clearInterval(SV.timer); SV.timer = setInterval(() => svLoad().catch(() => {}), 5 * 60 * 1000);
+        if (silent) {
+          // actualización invisible: conserva posición, búsqueda y foco, sin animaciones
+          const app = document.getElementById('sv-app'), top = app.scrollTop, a = document.activeElement, f = a && a.id === 'sv-q' ? { s: a.selectionStart, e: a.selectionEnd } : null;
+          SV.data = nuevo; SV.quiet = true; svRender(); SV.quiet = false; app.scrollTop = top;
+          if (f) { const q = document.getElementById('sv-q'); if (q) { q.focus({ preventScroll: true }); try { q.setSelectionRange(f.s, f.e); } catch (x) {} } app.scrollTop = top; }
+          return;
+        }
+        SV.data = nuevo; svRender();
+        liveStart('sup');
       } catch (e) {
+        if (silent) { if (/sesi[oó]n|desactivado/i.test(e.message)) { svStore('sv_ses_' + SV.id, null); SV.session = ''; svShowLogin('Su sesión terminó. Ingrese su token.'); } return; }
         svStore('sv_ses_' + SV.id, null); SV.session = '';
         svShowLogin('No se pudo abrir el panel: ' + e.message);
         console.error('SUP_DASHBOARD', e);
@@ -2110,7 +2168,7 @@
     function svCountUp() {
       const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       document.querySelectorAll('#sv-main [data-count]').forEach(el => {
-        const to = Number(el.dataset.count), d = Number(el.dataset.dec), pre = el.dataset.pre || '', t0 = performance.now(), dur = reduce ? 1 : 800;
+        const to = Number(el.dataset.count), d = Number(el.dataset.dec), pre = el.dataset.pre || '', t0 = performance.now(), dur = (reduce || SV.quiet) ? 1 : 800;
         const step = t => { const k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3); el.textContent = pre + svFmt(to * e, d); if (k < 1) requestAnimationFrame(step); };
         requestAnimationFrame(step);
       });
@@ -2133,7 +2191,8 @@
           <div class="b" data-h="${Math.max(v > 0 ? 2 : 0, v / top * 100).toFixed(1)}">${s.alertas > 0 && SV.metrica !== 'alertas' ? '<i class="al"></i>' : ''}</div>
           <span class="x">${((n <= 7 || (!narrow && n <= 14)) || i % (narrow ? 3 : 3) === 0) ? esc(s.fecha.substring(8, 10) + '/' + s.fecha.substring(5, 7)) : ''}</span></div>`;
       }).join('') + '</div>';
-      requestAnimationFrame(() => requestAnimationFrame(() => ch.querySelectorAll('.b').forEach(e => { e.style.height = e.dataset.h + '%'; })));
+      if (SV.quiet) ch.querySelectorAll('.b').forEach(e => { e.style.transition = 'none'; e.style.height = e.dataset.h + '%'; });
+      else requestAnimationFrame(() => requestAnimationFrame(() => ch.querySelectorAll('.b').forEach(e => { e.style.height = e.dataset.h + '%'; })));
       const info = document.getElementById('sv-chart-info');
       const show = i => { const s = serie[i]; info.innerHTML = `<b>${svDia(s.fecha)}</b> · ${s.abastecimientos} cargas · ${svFmt(s.galones, 1)} gal · $${svFmt(s.usd, 2)} · <span style="color:${s.alertas ? '#D7263D' : '#17A673'};font-weight:700">${s.alertas} alerta${s.alertas === 1 ? '' : 's'}</span>`; };
       ch.querySelectorAll('.sv-col').forEach(c => { c.addEventListener('click', () => show(+c.dataset.i)); c.addEventListener('mouseenter', () => show(+c.dataset.i)); });
