@@ -570,7 +570,27 @@
           </div>
           <div id="generated-code-display" class="hidden p-4 rounded-xl bg-slate-900 border border-amber-500/50 text-center"><p id="auth-code-text" class="text-2xl font-mono font-bold text-amber-400 tracking-widest"></p></div>
         </div>
+        <div class="glass-card p-5 rounded-2xl lg:col-span-2">
+          <div class="flex flex-wrap items-center gap-3 mb-4">
+            <h3 class="text-lg font-bold text-purple-400"><i class="fas fa-users mr-2"></i>Usuarios registrados</h3>
+            <span id="usr-count" class="text-xs text-slate-400"></span>
+            <input id="usr-buscar" type="search" autocomplete="off" oninput="renderUsuariosList()" placeholder="Buscar nombre, correo o distrito..." class="ml-auto w-full sm:w-72 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs">
+          </div>
+          <div id="usuarios-list" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3"></div>
+        </div>
       </section>
+
+      <!-- Modal: editar usuario -->
+      <div id="usr-edit-modal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm items-center justify-center p-4" style="z-index:100400">
+        <div class="w-full max-w-md p-6 rounded-2xl border border-purple-500/50 space-y-3" style="background:#0f172a">
+          <h3 class="text-lg font-bold text-purple-300"><i class="fas fa-user-pen mr-2"></i>Editar usuario</h3>
+          <p id="ue-email" class="text-xs text-slate-400 font-mono"></p>
+          <div><label class="block text-xs text-slate-300 mb-1">Grado y Nombres</label><input id="ue-nombre" type="text" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs"></div>
+          <div><label class="block text-xs text-slate-300 mb-1">Rol</label><select id="ue-rol" onchange="document.getElementById('ue-dist-box').style.display = this.value === 'SUPERADMIN' ? 'none' : 'block'" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs"><option value="ADMIN">ADMIN (Por Distrito)</option><option value="SUPERADMIN">SUPERADMIN (Total)</option></select></div>
+          <div id="ue-dist-box"><label class="block text-xs text-slate-300 mb-1">Distrito(s)</label><div id="ue-distritos" class="max-h-40 overflow-y-auto bg-slate-900 border border-slate-700 rounded-lg p-2 grid grid-cols-1 sm:grid-cols-2 gap-1 text-xs"></div></div>
+          <div class="flex justify-end gap-2 pt-2"><button type="button" onclick="cerrarEditarUsuario()" class="px-4 py-2 rounded-lg bg-slate-700 text-sm">Cancelar</button><button type="button" onclick="guardarEditarUsuario()" class="px-4 py-2 rounded-lg bg-purple-500 text-slate-950 font-bold text-sm">Guardar cambios</button></div>
+        </div>
+      </div>
 
 
       <!-- 10b. SUPERVISORES DE DISTRITO (SOLO SUPERADMIN) -->
@@ -1309,6 +1329,7 @@
       populateHistorialPlacas();
       renderAbastecimientosTable();
       renderVehiculosList();
+      renderUsuariosList();
       renderFuelPricesList();
       renderFuelTrendChart();
       populateContratoSelect();
@@ -1695,13 +1716,68 @@
       catch (err) { showAlert(err.message, true); }
     }
 
+    // ---------- Usuarios registrados (SuperAdmin): editar, suspender, eliminar ----------
+    let usrEditando = null;
+    function renderUsuariosList() {
+      const el = document.getElementById('usuarios-list'); if (!el) return;
+      const todos = (dashAll && dashAll.usuarios) || [];
+      const q = String((document.getElementById('usr-buscar') || {}).value || '').trim().toLowerCase();
+      const lista = todos.filter(u => !q || [u.nombre, u.email, u.distrito, u.rol].some(x => String(x || '').toLowerCase().includes(q)));
+      document.getElementById('usr-count').innerText = (q ? lista.length + ' de ' : '') + todos.length + ' usuarios';
+      el.innerHTML = lista.map(u => {
+        const i = todos.indexOf(u), susp = u.estado === 'SUSPENDIDO', yo = currentUser && String(currentUser.email).toLowerCase() === String(u.email).toLowerCase();
+        return `<div class="p-4 rounded-xl bg-slate-900/90 border ${susp ? 'border-red-500/50 opacity-80' : 'border-slate-700'} flex flex-col justify-between gap-3">
+          <div><div class="flex justify-between items-start gap-2"><span class="font-bold text-sm text-white leading-tight">${esc(u.nombre)}</span><span class="text-[10px] px-2 py-0.5 rounded whitespace-nowrap ${susp ? 'bg-red-500/20 text-red-300' : 'bg-emerald-500/20 text-emerald-300'}">${susp ? 'SUSPENDIDO' : 'ACTIVO'}</span></div>
+          <p class="text-[11px] text-slate-400 font-mono break-all mt-1">${esc(u.email)}</p>
+          <p class="text-[11px] mt-2"><span class="px-2 py-0.5 rounded ${u.rol === 'SUPERADMIN' ? 'bg-purple-500/20 text-purple-300' : 'bg-sky-500/20 text-sky-300'}">${esc(u.rol)}</span> <span class="text-slate-300">${esc(String(u.distrito).replace(/[;|]/g, ', '))}</span>${yo ? ' <span class="text-amber-300">(usted)</span>' : ''}</p></div>
+          <div class="flex justify-end gap-2 text-xs pt-2 border-t border-slate-800">
+            <button type="button" onclick="abrirEditarUsuario(${i})" class="px-2.5 py-1 rounded bg-sky-500/20 text-sky-300">Editar</button>
+            ${yo ? '' : `<button type="button" onclick="cambiarEstadoUsuario(${i})" class="px-2.5 py-1 rounded ${susp ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'}">${susp ? 'Reactivar' : 'Suspender'}</button>
+            <button type="button" onclick="eliminarUsuario(${i})" class="px-2.5 py-1 rounded bg-red-500/20 text-red-300">Eliminar</button>`}
+          </div></div>`;
+      }).join('') || '<p class="text-xs text-slate-400 md:col-span-3">Ningún usuario coincide.</p>';
+    }
+    function abrirEditarUsuario(i) {
+      const u = dashAll.usuarios[i]; if (!u) return; usrEditando = u.email;
+      document.getElementById('ue-email').innerText = u.email;
+      document.getElementById('ue-nombre').value = u.nombre;
+      document.getElementById('ue-rol').value = u.rol === 'SUPERADMIN' ? 'SUPERADMIN' : 'ADMIN';
+      const propios = new Set(String(u.distrito).split(/[;|]/).map(x => x.trim()).filter(Boolean));
+      const lista = [...new Set([...(publicData.distritos || []), ...propios])].filter(d => d && d !== 'TODOS');
+      document.getElementById('ue-distritos').innerHTML = lista.map(d => `<label class="flex items-center gap-2 px-1 py-0.5 rounded hover:bg-slate-800 cursor-pointer"><input type="checkbox" value="${esc(d)}" ${propios.has(d) ? 'checked' : ''}><span>${esc(d)}</span></label>`).join('');
+      document.getElementById('ue-dist-box').style.display = u.rol === 'SUPERADMIN' ? 'none' : 'block';
+      const m = document.getElementById('usr-edit-modal'); m.classList.remove('hidden'); m.style.display = 'flex';
+    }
+    function cerrarEditarUsuario() { const m = document.getElementById('usr-edit-modal'); m.classList.add('hidden'); m.style.display = ''; usrEditando = null; }
+    async function guardarEditarUsuario() {
+      const rol = document.getElementById('ue-rol').value;
+      const distrito = Array.from(document.querySelectorAll('#ue-distritos input:checked')).map(i => i.value).join(';');
+      if (rol !== 'SUPERADMIN' && !distrito) { showAlert('Marque al menos un distrito.', true); return; }
+      try {
+        const r = await apiCall('UPDATE_USER', { adminUser: currentUser, target: { email: usrEditando, nombre: document.getElementById('ue-nombre').value, rol, distrito } });
+        cerrarEditarUsuario(); showAlert(r.message); await refreshDashboardData();
+      } catch (err) { showAlert(err.message, true); }
+    }
+    async function cambiarEstadoUsuario(i) {
+      const u = dashAll.usuarios[i]; if (!u) return; const susp = u.estado === 'SUSPENDIDO';
+      if (!confirm(susp ? `¿Reactivar a ${u.nombre}?` : `¿Suspender a ${u.nombre}? No podrá ingresar hasta que lo reactive.`)) return;
+      try { const r = await apiCall('SET_USER_ESTADO', { adminUser: currentUser, email: u.email, estado: susp ? 'ACTIVO' : 'SUSPENDIDO' }); showAlert(r.message); await refreshDashboardData(); }
+      catch (err) { showAlert(err.message, true); }
+    }
+    async function eliminarUsuario(i) {
+      const u = dashAll.usuarios[i]; if (!u) return;
+      if (!confirm(`¿Eliminar definitivamente a ${u.nombre} (${u.email})? Esta acción no se puede deshacer.`)) return;
+      try { const r = await apiCall('DELETE_USER', { adminUser: currentUser, email: u.email }); showAlert(r.message); await refreshDashboardData(); }
+      catch (err) { showAlert(err.message, true); }
+    }
+
     function toggleUserDistritoInput() { document.getElementById('usr-distrito-box').style.display = document.getElementById('usr-rol').value === 'SUPERADMIN' ? 'none' : 'block'; }
 
     async function handleCreateUser(e) {
       e.preventDefault();
       const rol = document.getElementById('usr-rol').value, dist = Array.from(document.querySelectorAll('#usr-distrito input:checked')).map(i => i.value).join(';');
       if (rol !== 'SUPERADMIN' && !dist) { showAlert('Marque al menos un distrito.', true); return; }
-      try { const resp = await apiCall('CREATE_USER', { adminUser: currentUser, newUser: { email: document.getElementById('usr-email').value, nombre: document.getElementById('usr-nombre').value, rol, distrito: rol === 'SUPERADMIN' ? 'TODOS' : dist } }); showAlert(resp.message); e.target.reset(); document.querySelectorAll('#usr-distrito input').forEach(i => { i.checked = false; }); }
+      try { const resp = await apiCall('CREATE_USER', { adminUser: currentUser, newUser: { email: document.getElementById('usr-email').value, nombre: document.getElementById('usr-nombre').value, rol, distrito: rol === 'SUPERADMIN' ? 'TODOS' : dist } }); showAlert(resp.message); e.target.reset(); document.querySelectorAll('#usr-distrito input').forEach(i => { i.checked = false; }); await refreshDashboardData(); }
       catch (err) { showAlert(err.message, true); }
     }
 
