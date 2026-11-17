@@ -313,16 +313,20 @@
           <div><h2 class="text-xl font-bold">Registro de Abastecimiento</h2><p class="text-xs text-slate-400">Verificación de conductor y captura en pantalla completa</p></div>
         </div>
         <form id="form-abastecimiento" onsubmit="handleAbastecimientoSubmit(event)" class="space-y-4">
-          <div><label class="block text-xs font-semibold uppercase text-slate-300 mb-1">1. Distrito Operativo</label><select id="abs-distrito" required onchange="filterPlacasByDistrito('abs-distrito', 'abs-placa')" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm"></select></div>
-          <div><label class="block text-xs font-semibold uppercase text-slate-300 mb-1">2. Placa del Vehículo</label><select id="abs-placa" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm"><option value="">Primero escoja un distrito...</option></select></div>
-          <div><label class="block text-xs font-semibold uppercase text-slate-300 mb-1">3. Cédula del Conductor</label><input type="text" id="abs-cedula" required oninput="this.value=this.value.replace(/[^0-9]/g,'')" maxlength="13" placeholder="Ej: 1712345678" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm"></div>
+          <div><label class="block text-xs font-semibold uppercase text-slate-300 mb-1">1. Cédula del Conductor</label><input type="text" id="abs-cedula" required inputmode="numeric" autocomplete="off" oninput="this.value=this.value.replace(/[^0-9]/g,''); buscarPlacasPorCedula()" maxlength="13" placeholder="Ej: 1712345678" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm"></div>
+          <div>
+            <label class="block text-xs font-semibold uppercase text-slate-300 mb-1">2. Placa del Vehículo</label>
+            <select id="abs-placa" required disabled onchange="elegirPlacaAbs()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm"><option value="">Primero escriba su cédula...</option></select>
+            <p id="abs-placa-info" class="text-[11px] mt-1 text-slate-400"></p>
+            <select id="abs-distrito" class="hidden" tabindex="-1" aria-hidden="true"></select>
+          </div>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div><label class="block text-xs font-semibold uppercase text-slate-300 mb-1">4. Galones</label><input type="number" step="0.0001" min="0.0001" id="abs-galones" required placeholder="Ej: 12.50" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm"></div>
-            <div><label class="block text-xs font-semibold uppercase text-slate-300 mb-1">5. Kilometraje Actual</label><input type="number" id="abs-km" required placeholder="Ej: 84520" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm"></div>
+            <div><label class="block text-xs font-semibold uppercase text-slate-300 mb-1">3. Galones</label><input type="number" step="0.0001" min="0.0001" id="abs-galones" required placeholder="Ej: 12.50" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm"></div>
+            <div><label class="block text-xs font-semibold uppercase text-slate-300 mb-1">4. Kilometraje Actual</label><input type="number" id="abs-km" required placeholder="Ej: 84520" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm"></div>
           </div>
           <div class="p-4 rounded-xl bg-slate-900/90 border border-slate-700 space-y-3">
             <div class="flex items-center justify-between">
-              <div><p class="text-xs font-bold text-amber-400 uppercase"><i class="fas fa-camera mr-1"></i> 6. Foto de Factura (Cámara en Pantalla Completa)</p><p class="text-[11px] text-slate-400">Captura directa obligatoria</p></div>
+              <div><p class="text-xs font-bold text-amber-400 uppercase"><i class="fas fa-camera mr-1"></i> 5. Foto de Factura (Cámara en Pantalla Completa)</p><p class="text-[11px] text-slate-400">Captura directa obligatoria</p></div>
               <button type="button" onclick="startFullscreenCamera()" class="px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-xs font-bold text-white shadow-md"><i class="fas fa-camera mr-1"></i> Activar Cámara</button>
             </div>
             <div id="snapshot-preview-box" class="hidden space-y-2">
@@ -891,7 +895,7 @@
         const marcados = new Set(Array.from(ul.querySelectorAll('input:checked')).map(i => i.value));
         ul.innerHTML = list.map(d => `<label class="flex items-center gap-2 px-1 py-0.5 rounded hover:bg-slate-800 cursor-pointer"><input type="checkbox" value="${esc(d)}" ${marcados.has(d) ? 'checked' : ''}><span>${esc(d)}</span></label>`).join('') || '<span class="text-slate-500">Sin distritos en el catálogo.</span>';
       }
-      ['abs-distrito', 'bit-distrito', 'veh-distrito'].forEach(id => {
+      ['bit-distrito', 'veh-distrito'].forEach(id => {
         const sel = document.getElementById(id);
         if (!sel) return;
         const prev = sel.value;
@@ -905,6 +909,39 @@
         list.forEach(d => { sel.innerHTML += `<option value="${d}">${d}</option>`; });
         if (prev && list.includes(prev)) sel.value = prev;
       });
+    }
+
+    // ---- Formulario de abastecimiento: primero la cédula, luego la placa asociada ----
+    let _absBusq = 0, _absTimer = null, _absUnidades = [];
+    function resetAbsPlaca(msg) {
+      const sel = document.getElementById('abs-placa');
+      sel.innerHTML = `<option value="">${msg || 'Primero escriba su cédula...'}</option>`; sel.disabled = true; _absUnidades = [];
+      document.getElementById('abs-distrito').innerHTML = '';
+    }
+    function buscarPlacasPorCedula() {
+      clearTimeout(_absTimer);
+      const ced = document.getElementById('abs-cedula').value.trim(), info = document.getElementById('abs-placa-info');
+      if (ced.length < 10) { resetAbsPlaca(); info.className = 'text-[11px] mt-1 text-slate-400'; info.innerText = ''; return; }
+      const mi = ++_absBusq;
+      _absTimer = setTimeout(async () => {
+        info.className = 'text-[11px] mt-1 text-slate-400'; info.innerText = 'Buscando vehículos asociados…';
+        try {
+          const r = await apiCall('GET_PLACAS_CEDULA', { cedula: ced }, { silent: true });
+          if (mi !== _absBusq) return;   // llegó una respuesta de una cédula anterior
+          const lista = (r && r.placas) || [];
+          const sel = document.getElementById('abs-placa'); _absUnidades = lista;
+          if (!lista.length) { resetAbsPlaca('Sin vehículo asociado'); info.className = 'text-[11px] mt-1 text-red-300'; info.innerText = 'Esta cédula no está registrada como conductor de ningún vehículo. Verifique el número o comuníquese con su administrador.'; return; }
+          sel.disabled = false;
+          sel.innerHTML = (lista.length > 1 ? '<option value="">Seleccione uno de sus vehículos...</option>' : '') + lista.map(v => `<option value="${esc(v.placa)}">${esc(v.placa)} - ${esc(v.marca_modelo || '')} [${esc(v.tipo_combustible)}]</option>`).join('');
+          if (lista.length === 1) { sel.value = lista[0].placa; info.className = 'text-[11px] mt-1 text-emerald-400'; info.innerText = 'Vehículo asociado encontrado.'; }
+          else { info.className = 'text-[11px] mt-1 text-amber-300'; info.innerText = 'Esta cédula tiene ' + lista.length + ' vehículos asociados: seleccione cuál va a abastecer.'; }
+          elegirPlacaAbs();
+        } catch (err) { if (mi === _absBusq) { resetAbsPlaca(); info.className = 'text-[11px] mt-1 text-red-300'; info.innerText = err.message || 'No se pudo consultar. Intente de nuevo.'; } }
+      }, 350);
+    }
+    function elegirPlacaAbs() {
+      const v = _absUnidades.find(x => x.placa === document.getElementById('abs-placa').value), d = document.getElementById('abs-distrito');
+      d.innerHTML = v ? `<option value="${esc(v.distrito)}" selected>${esc(v.distrito)}</option>` : '';
     }
 
     function filterPlacasByDistrito(distId, placaId) {
@@ -1088,7 +1125,7 @@
 
         const resp = await apiCall('SUBMIT_ABASTECIMIENTO', { data });
         showAlert(`${resp.message || 'Abastecimiento registrado.'}${resp.conductor ? ' Conductor: ' + resp.conductor : ''}`);
-        form.reset();
+        form.reset(); resetAbsPlaca(); document.getElementById('abs-placa-info').innerText = '';
         if (fotoInput) fotoInput.value = '';
         const preview = document.getElementById('snapshot-preview-img');
         if (preview) preview.removeAttribute('src');
@@ -2394,7 +2431,7 @@
               <span class="sv-seg" style="margin-left:0">${[['todas', 'Todas'], ['si', 'Abastecieron'], ['no', 'Sin abastecer'], ['alerta', 'Con alerta']].map(([k, n]) => `<button class="${SV.filtro === k ? 'on' : ''}" onclick="svSetFiltro('${k}')">${n}</button>`).join('')}</span>
             </div>
             <div class="sv-units" id="sv-units"></div></div>
-          <p class="sv-foot">Se marca alerta por doble abastecimiento en el mismo día o por un rendimiento fuera de ±${Math.round((D.parametros.tolerancia || .25) * 100)}% del promedio histórico de cada unidad.</p>
+          <p class="sv-foot">Se marca alerta por doble abastecimiento en el mismo día o por un rendimiento fuera del rango que fija la ${esc(D.parametros.directiva || 'Directiva')} para su modelo; si el modelo no consta en la directiva, se usa ±${Math.round((D.parametros.tolerancia || .25) * 100)}% de su promedio histórico.</p>
         </div>
       </div>`;
       svAlerts(); svUnits(); svChart(); svCountUp();
@@ -2484,13 +2521,14 @@
       const box = document.getElementById('sv-units');
       if (!lista.length) { box.innerHTML = '<p style="color:#5B6B7F;grid-column:1/-1;text-align:center;padding:16px">Ninguna unidad coincide con estos filtros.</p>'; return; }
       box.innerHTML = lista.slice(0, 120).map(u => {
-        const pp = u.pp, ref = u.kpg_historico, max = ref ? ref * 1.8 : 1, tol = D.parametros.tolerancia || .25, cls = pp.alertas ? 'al' : pp.n ? 'f' : 'no';
+        const pp = u.pp, dir = u.directiva, ref = dir ? (dir.min + dir.max) / 2 : u.kpg_historico, max = dir ? dir.max * 1.3 : (ref ? ref * 1.8 : 1), tol = D.parametros.tolerancia || .25, cls = pp.alertas ? 'al' : pp.n ? 'f' : 'no';
         let gauge = '<div class="lu" style="margin-top:10px">Aún sin histórico de rendimiento suficiente</div>';
         if (ref) {
-          const lo = ref * (1 - tol) / max * 100, hi = ref * (1 + tol) / max * 100, k = pp.kpg, pos = k == null ? null : Math.max(2, Math.min(98, k / max * 100));
-          const fuera = k != null && (k < ref * (1 - tol) || k > ref * (1 + tol));
+          const rmin = dir ? dir.min : ref * (1 - tol), rmax = dir ? dir.max : ref * (1 + tol);
+          const lo = rmin / max * 100, hi = rmax / max * 100, k = pp.kpg, pos = k == null ? null : Math.max(2, Math.min(98, k / max * 100));
+          const fuera = k != null && (k < rmin || k > rmax);
           gauge = `<div class="sv-gauge"><div class="band" style="left:${lo}%;width:${hi - lo}%"></div>${pos != null ? `<div class="dot" style="left:${pos}%;background:${fuera ? '#D7263D' : '#17A673'}"></div>` : ''}</div>
-            <div class="sv-gl"><span>Histórico ${svFmt(ref, 1)} km/gal</span><span style="color:${fuera ? '#D7263D' : '#17A673'};font-weight:700">${k != null ? 'Periodo ' + svFmt(k, 1) : 'sin recorrido medible'}</span></div>`;
+            <div class="sv-gl"><span>${dir ? 'Directiva ' + dir.min + '–' + dir.max + ' km/gal' : 'Histórico ' + svFmt(ref, 1) + ' km/gal'}</span><span style="color:${fuera ? '#D7263D' : '#17A673'};font-weight:700">${k != null ? 'Periodo ' + svFmt(k, 1) : 'sin recorrido medible'}</span></div>`;
         }
         return `<div class="sv-unit ${cls}"><div class="top"><span class="pl sv-num">${esc(u.placa)}</span><span class="sv-tag ${cls}">${pp.alertas ? pp.alertas + (pp.alertas > 1 ? ' alertas' : ' alerta') : pp.n ? 'Abasteció' : 'Sin abastecer'}</span></div>
           <div class="md">${D.supervisor.general ? '<b>' + esc(u.distrito) + '</b> · ' : ''}${esc(u.marca_modelo || '—')} · ${esc(u.tipo_combustible || '')}</div>
